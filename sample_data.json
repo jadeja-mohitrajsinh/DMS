@@ -1,0 +1,10 @@
+[
+    {"source": "Alice", "target": "Bob"},
+    {"source": "Alice", "target": "Charlie"},
+    {"source": "Bob", "target": "David"},
+    {"source": "Charlie", "target": "Eva"},
+    {"source": "Eva", "target": "Frank"},
+    {"source": "David", "target": "Frank"},
+    {"source": "Alice", "target": "David"},
+    {"source": "Bob", "target": "Charlie"}
+]

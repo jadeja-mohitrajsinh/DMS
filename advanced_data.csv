@@ -1,0 +1,12 @@
+source,target,weight,platform
+YT_Alpha_A,YT_Alpha_B,7.0,YouTube
+YT_Alpha_B,YT_Alpha_C,6.0,YouTube
+YT_Alpha_C,YT_Alpha_A,5.0,YouTube
+
+YT_Beta_A,YT_Beta_B,7.0,YouTube
+YT_Beta_B,YT_Beta_C,6.0,YouTube
+YT_Beta_C,YT_Beta_A,5.0,YouTube
+
+YT_Gamma_A,YT_Gamma_B,7.0,YouTube
+YT_Gamma_B,YT_Gamma_C,6.0,YouTube
+YT_Gamma_C,YT_Gamma_A,5.0,YouTube
