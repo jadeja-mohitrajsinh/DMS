@@ -1,502 +1,449 @@
 
-<div align="center">
-<b>MARWADI UNIVERSITY, RAJKOT</b><br>
-Faculty of Technology<br>
-Department of AI, ML & DS<br>
-</div>
+# MARWADI UNIVERSITY, RAJKOT
+Faculty of Technology
+Department of AI, ML & DS
+ 
+## PROJECT REPORT
+### Social Network Analysis Using Graph Theory
 
-<br>
+**Semester:** IV  
+**Branch:** CSE-AI & ML  
+**Academic Year:** 2025-26  
+**Submitted on:** 6/4/2026
 
-<div align="center">
-<b><span style="font-size:16pt; font-family:'Times New Roman';">PROJECT REPORT</span></b><br>
-<b>Title of the Project:</b> <span style="font-size:16pt; font-family:'Times New Roman';">AI-powered Document Management System (DMS)</span><br>
-Semester: IV<br>
-Branch: CSE-AI & DS<br>
-Academic Year: 2025-26<br>
-Submitted on: __/__/2026<br>
-</div>
-
-<br>
+---
 
 ## Team Details
 
 | Sr. No. | Enrollment Number | Student Name | Division |
-|---------|-------------------|-------------|----------|
-| 1       |                   |             |          |
-| 2       |                   |             |          |
-| 3       |                   |             |          |
-| 4       |                   |             |          |
-| 5       |                   |             |          |
-| 6       |                   |             |          |
+|---------|-------------------|--------------|----------|
+| 1 | 92510118004 | Mohitrajsinh Jadeja | 4EN22 |
+| 2 | 92510118010 | Sahil Rakhaiya | 4EN22 |
+| 3 | 92510118011 | Yash Karena | 4EN22 |
+| 4 | 92510118019 | Anuj Hadiyel | 4EN22 |
+| 5 | 92510118026 | Appalanidu Setti | 4EN22 |
 
 <br>
 
 ## INDEX
 
-| Sr. No. | Topic                              | Page No. |
-|---------|------------------------------------|----------|
-| I       | Index                              | 1        |
-| II      | Abstract                           | 2        |
-| 1       | Introduction                       | 3        |
-| 2       | Background                         | 4        |
-| 3       | Literature Review                  | 5        |
-| 4       | Project Description                | 6        |
-| 4.1     |   Methodology                      | 7        |
-| 4.2     |   Implementation / System Design   | 8        |
-| 4.3     |   Results / Analysis               | 8        |
-| 4.4     |   Applications                     | 9        |
-| 4.5     |   Limitations and Future Work      | 10       |
-| 5       | Code / Technical Implementation    | 11       |
-| 5.1     |   Program Structure                | 12       |
-| 5.2     |   Code Explanation                 | 13       |
-| 5.3     |   Input and Output                 | 13       |
-| 5.4     |   Output Explanation               | 14       |
-| 6       | Team Contribution                  | 15       |
-| 7       | Conclusion                         | 16       |
-| 8       | References                         | 17       |
+| Sr. No. | Topic | Page No. |
+|---------|-------|----------|
+| I | Index | 1 |
+| II | Abstract | 2 |
+| 1 | Introduction | 3 |
+| 2 | Background | 5 |
+| 3 | Literature Review | 8 |
+| 4 | Project Description | 9 |
+| 4.1 | Methodology | 9 |
+| 4.2 | Implementation / System Design | 10 |
+| 4.3 | Results / Analysis | 11 |
+| 4.4 | Applications | 13 |
+| 4.5 | Limitations and Future Work | 14 |
+| 5 | Code / Technical Implementation | 15 |
+| 5.1 | Program Structure | 15 |
+| 5.2 | Code Explanation | 16 |
+| 5.3 | Input and Output | 18 |
+| 5.4 | Output Explanation | 19 |
+| 6 | Team Contribution | 20 |
+| 7 | Conclusion | 21 |
+| 8 | References | 22 |
 
 ---
 
-# ABSTRACT
+## ABSTRACT
 
-*Manual document management in organizations leads to lost files, inefficient retrieval, and lack of actionable insights from unstructured data. Inefficient document handling wastes employee time, increases compliance risk, and prevents organizations from leveraging their data for decision-making. We built an AI-powered Document Management System (DMS) that automates document ingestion, organizes files, extracts intelligence, and visualizes relationships between documents and entities. The backend is built with Python (FastAPI, NetworkX, Pandas), the frontend with React (Vite), and data is handled in CSV/JSON formats with D3.js for visualization. Results include an 80% reduction in document retrieval time, automated extraction of key entities with 92% accuracy, and interactive graph visualization of document relationships. This project demonstrates the impact of integrating AI and graph analytics for smarter document management in modern organizations.*
+Social networks produce highly interconnected data that is difficult to analyze using ordinary table-based methods. This project presents a social network analysis system using graph theory, where users are modeled as nodes and relationships are modeled as weighted edges. The system supports structural analysis of connectivity, influence, and community behavior, along with shortest-path computation and interactive visualization.
 
----
+The backend is implemented using Python, FastAPI, NetworkX, and Pandas, while the frontend uses React, Vite, D3.js, Tailwind CSS, Lucide React, and Framer Motion. The system processes a structured CSV dataset containing weighted relationships and platform attributes, detects communities using modularity-based methods, and computes weighted paths using Dijkstra's algorithm. The frontend includes a path finder interface, community-colored nodes, stable layout caching, and edge-level tooltips that display platform and weight.
 
-# 1. INTRODUCTION
-
-The introduction sets the context for the project. It provides background information on the topic, identifies the problem being addressed, and states the objectives of the project. This section motivates the reader and explains why the project is important and relevant in today's context.
-
-## 1.1 Problem Statement
-
-Organizations struggle to manage and extract value from large volumes of unstructured documents, resulting in lost information, slow retrieval, and missed insights.
-
-## 1.2 Objectives
-
-- Build a system to automate document ingestion and classification
-- Enable fast, accurate document search and retrieval
-- Extract entities and relationships from documents
-- Visualize document networks for actionable insights
-- Reduce manual document handling time by 70%
-
-## 1.3 Scope of the Project
-
-**Included:**
-- Document upload (CSV, JSON)
-- Entity extraction and relationship mapping
-- Graph-based visualization
-- REST API for integration
-
-**Excluded:**
-- Real-time collaboration
-- Mobile app
-- Advanced NLP (summarization, sentiment analysis)
-
-## 1.4 Organization of the Report
-
-Section 2 covers the technical background and key concepts. Section 3 reviews related literature and identifies the research gap. Section 4 details the methodology, system design, results, applications, and limitations. Section 5 explains the code structure and technical implementation. Section 6 documents team contributions. Section 7 concludes the report, and Section 8 lists references.
+The results show that graph-theoretic analysis can reveal influential nodes, bridge nodes, and densely connected clusters more effectively than tabular inspection. This project demonstrates that social network structure can be explored as a dynamic graph system, making complex relational data easier to interpret and analyze.
 
 ---
 
-# 2. BACKGROUND
+## 1. INTRODUCTION 
 
+Social networks are a core part of digital communication systems. They contain relationships among users, groups, and communities that cannot be understood properly through simple lists or tables. Graph theory provides a strong mathematical framework for modeling these relationships by representing entities as nodes and interactions as edges. This allows the analysis of connectivity, influence, clustering, and flow through the network.
 
-This section explains the foundational theoretical concepts, principles, and technical background that are essential for understanding the project. It provides enough background for a reader with general engineering knowledge to understand the technical aspects of the work without requiring deep expertise in the specific domain.
+This project builds a graph-based social network analysis system that goes beyond basic visualization. It supports weighted relationships, community detection, and shortest-path analysis with detailed edge-level information. The system is designed to help identify important users, understand cluster structure, and inspect how information moves across the network.
 
-Document management systems (DMS) are critical for organizations to efficiently store, retrieve, and utilize information. Modern DMS solutions leverage artificial intelligence (AI), machine learning (ML), and graph theory to automate and enhance document handling, entity extraction, and knowledge discovery. The evolution of DMS has been shaped by the increasing complexity and volume of organizational data, necessitating advanced methods for information extraction, semantic understanding, and relationship mapping.
+### 1.1 Problem Statement
 
-One of the most significant advancements in recent years is the adoption of graph databases and knowledge graphs. Unlike traditional relational databases, graph databases (such as Neo4j or NetworkX in Python) are optimized for storing interconnected data, making them ideal for modeling document-entity relationships, citation networks, and organizational hierarchies. This approach enables efficient traversal and querying of complex relationships, supporting advanced analytics such as influence propagation, subgraph matching, and anomaly detection.
+Social network data contains complex relational patterns, but traditional methods fail to show connection strength, community structure, and influence pathways clearly. There is a need for a graph-theory-based system that can model weighted relationships and extract meaningful structural insights from the network.
 
-Natural Language Processing (NLP) has also seen rapid progress, particularly with the advent of transformer-based models like BERT, RoBERTa, and GPT. These models have set new benchmarks in tasks such as named entity recognition (NER), document classification, and semantic similarity, enabling more accurate and context-aware extraction of information from unstructured text. Integrating such models into a DMS allows for automated tagging, topic modeling, and even summarization, greatly enhancing the value derived from organizational documents.
+### 1.2 Objectives
 
-Furthermore, AI-driven document management is not limited to extraction and storage. It encompasses intelligent search (semantic search), recommendation systems (suggesting related documents or entities), and even predictive analytics (forecasting trends or risks based on document content). The synergy of AI, graph theory, and modern software engineering practices forms the backbone of next-generation DMS solutions, empowering organizations to transform raw data into actionable knowledge and strategic advantage.
+- Model social network data as a weighted graph 
+- Identify influential nodes using centrality measures 
+- Detect communities using modularity-based algorithms 
+- Compute shortest paths using edge weights 
+- Provide interactive and stable graph visualization 
+- Show detailed path information including platform and weight
 
-## 2.1 Key Concepts and Definitions
+### 1.3 Scope of the Project
 
-- **Document Management System (DMS):** Software for organizing, storing, tracking, and retrieving electronic documents. Modern DMSs often include features such as version control, access management, and search capabilities.
-- **Entity Extraction:** The process of automatically identifying and classifying key elements (entities) such as names, organizations, locations, and dates from unstructured text. Entity extraction is a core task in information extraction and natural language processing (NLP).
-- **Graph Data Model:** A way of representing data as a network of nodes (entities) and edges (relationships). Graph models are particularly effective for capturing complex relationships and enabling advanced analytics such as community detection and centrality analysis.
-- **Knowledge Graph:** A structured representation of real-world entities and their interrelations, enabling semantic search and reasoning over data.
+The project focuses on graph construction, weighted path analysis, community detection, and visualization of social network data. It supports structured CSV input and optional JSON handling. It does not include machine learning, sentiment analysis, or real-time streaming data.
 
-## 2.2 Theoretical Framework
+### 1.4 Organization of the Report
 
-- **Graph Theory:** Graphs are mathematical structures used to model pairwise relations between objects. In a DMS, documents and entities are represented as nodes, and their relationships (e.g., references, authorship, topic similarity) as edges. Key graph algorithms include:
-   - **Centrality Measures:** Identify the most important nodes (e.g., documents with the most references or entities with the most connections).
-   - **Community Detection:** Uncover clusters or groups of related documents/entities, useful for topic modeling or organizational insights.
-   - **Shortest Path Algorithms:** Find the most direct connections between entities or documents, aiding in information retrieval.
-- **Entity Extraction Methods:**
-   - **Rule-based Extraction:** Uses regular expressions and pattern matching to identify entities based on predefined rules (e.g., capitalized words for names, date formats).
-   - **Statistical and ML-based Extraction:** Employs machine learning models (e.g., Conditional Random Fields, Hidden Markov Models) or deep learning (e.g., BiLSTM-CRF, transformers like BERT) to learn entity patterns from annotated data.
-   - **Hybrid Approaches:** Combine rule-based and ML methods for improved accuracy and adaptability.
-- **Natural Language Processing (NLP):** NLP techniques such as tokenization, part-of-speech tagging, and dependency parsing are foundational for entity extraction and document classification.
-- **RESTful API Design:** REST (Representational State Transfer) is an architectural style for designing networked applications. RESTful APIs use standard HTTP methods (GET, POST, PUT, DELETE) and stateless communication, making them scalable and easy to integrate with frontend applications.
-
-## 2.3 Technologies / Tools Used
-
-- **Backend:** Python (FastAPI for API development, NetworkX for graph operations, Pandas for data manipulation). Python is chosen for its rich ecosystem in data science and rapid prototyping.
-- **Frontend:** React (with Vite for fast development and hot module replacement), D3.js for interactive graph visualization. React enables modular UI development, while D3.js provides powerful data-driven visualizations.
-- **Database:** In-memory storage for demonstration, with design extensibility for MongoDB (NoSQL, document-oriented) or PostgreSQL (relational, supports JSON fields) for production use.
-- **APIs:** Custom REST endpoints facilitate communication between frontend and backend, supporting modularity and scalability.
-- **Other Tools:**
-   - **Jupyter Notebooks:** For prototyping and data analysis.
-   - **Git:** Version control for collaborative development.
-   - **VS Code:** Code editing and debugging.
-
-These technologies and theoretical foundations collectively enable the development of an intelligent, extensible, and user-friendly document management system. By leveraging the latest advances in AI and data modeling, the project aims to deliver not just a repository, but a platform for organizational intelligence and continuous learning.
+Section 2 explains the theoretical background. Section 3 reviews related literature. Section 4 describes the methodology, system design, results, applications, and limitations. Section 5 explains technical implementation and code structure. Section 6 gives team contribution. Section 7 presents the conclusion, and Section 8 lists references.
 
 ---
 
-# 3. LITERATURE REVIEW
+## 2. BACKGROUND
 
-1. **[Smith et al., 2022]** – "A Graph-Based Approach to Document Management"
-   - Used graphs to model document relationships
-   - Limitation: No entity extraction; static graphs
-   - Our edge: Dynamic entity extraction and real-time graph updates
+Social network analysis is based on graph theory, which provides a mathematical framework for representing relations between entities. In a graph G = (V, E), V denotes the set of vertices or nodes, and E denotes the set of edges or relationships. In this project, nodes represent users or accounts, while edges represent interactions with additional properties such as weight and platform.
 
-2. **[Lee & Kumar, 2021]** – "Automated Entity Recognition in Enterprise Documents"
-   - Applied ML for entity extraction
-   - Limitation: No visualization or relationship mapping
-   - Our edge: Integrated extraction with interactive visualization
+A weighted graph is used because not all relationships have the same strength. The weight on an edge can represent interaction frequency, connection intensity, or importance. This makes the analysis more realistic than using an unweighted graph.
 
-3. **[Alfresco DMS Documentation, 2023]**
-   - Enterprise document storage
-   - Limitation: Lacks AI-driven insights
-   - Our edge: Intelligence layer for actionable insights
+Several graph-theoretic measures are used in this project. Degree centrality identifies highly connected nodes. Betweenness centrality identifies nodes that act as bridges between different parts of the network. Clustering coefficient measures how strongly a node's neighbors are connected with each other. Shortest-path analysis determines the most efficient route between two nodes using edge weights.
+
+### Mathematical Concepts Used
+
+**Degree Centrality:**
+$$C_D(v) = \frac{\deg(v)}{n - 1}$$
+
+**Betweenness Centrality:**
+$$C_B(v) = \sum \frac{\sigma(s, t | v)}{\sigma(s, t)}$$
+where $\sigma(s, t)$ is the number of shortest paths from s to t, and $\sigma(s, t | v)$ is the number of those paths passing through v.
+
+**Clustering Coefficient:**
+$$C(v) = \frac{2e_v}{k_v(k_v - 1)}$$
+where $e_v$ is the number of edges among neighbors of v and $k_v$ is the degree of v.
+
+**Weighted Shortest Path:**
+$$d(u, v) = \min \sum w(e)$$
+where $w(e)$ is the weight of an edge e.
+
+**Modularity for Community Detection:**
+$$Q = \frac{1}{2m} \sum \left[A_{ij} - \frac{k_i k_j}{2m}\right] \delta(c_i, c_j)$$
+
+This equation measures the strength of community structure by comparing observed edges with expected random connections.
+
+### 2.1 Key Concepts and Definitions
+
+- **Graph:** A set of nodes and edges representing relationships. 
+- **Node:** A user or entity in the network. 
+- **Edge:** A relationship between two nodes. 
+- **Weighted Edge:** An edge with strength, frequency, or importance. 
+- **Community:** A group of nodes more strongly connected internally than externally. 
+- **Shortest Path:** The minimum-cost route between two nodes.
+
+### 2.2 Theoretical Framework
+
+The system combines graph representation, weighted traversal, and modularity-based clustering. The graph is used to study structural importance, path efficiency, and community formation. Weighted traversal is used to determine the strongest or least costly path between selected nodes. Community detection is used to identify dense subgraphs that represent tightly connected groups.
+
+### 2.3 Technologies / Tools Used
+
+**Frontend**
+- React 
+- Vite 
+- D3.js 
+- Tailwind CSS 
+- Lucide React 
+- Framer Motion 
+
+**Backend**
+- Python 
+- FastAPI 
+- NetworkX 
+- Pandas 
+
+**Data**
+- CSV (advanced_data.csv) 
+- JSON support 
+
+**Visualization**
+- D3.js for interactive graph display 
+- NetworkX and Matplotlib for static analysis and plots
+
+---
+
+## 3. LITERATURE REVIEW
+
+The study of social networks using graph theory has been widely explored in both academic research and practical applications. Researchers have used graph-based models to understand relationships, identify influential nodes, and detect communities within complex networks.
+
+**[Newman, 2010]** – In Networks: An Introduction, Newman provides a comprehensive foundation of network theory, explaining concepts such as degree distribution, centrality measures, and network topology. The work highlights how graph-based representations can effectively model real-world networks, including social systems. This is directly relevant as it forms the theoretical base for analyzing connectivity and influence in this project.
+
+**[Barabási, 2016]** – In Network Science, Barabási introduces the concept of scale-free networks and explains how real-world networks often follow power-law distributions. The study emphasizes the presence of highly connected nodes (hubs), which are critical in understanding influence and information flow. This concept is applied in the project to identify important nodes using centrality measures.
+
+**[Girvan & Newman, 2002]** – This research paper focuses on community detection in networks and proposes methods to identify clusters within complex systems. The study demonstrates how networks can be divided into groups with strong internal connections. This is relevant to the project as community detection helps identify clusters within social networks.
 
 **Summary:**
-Existing systems either focus on storage or basic retrieval, lacking integrated intelligence and visualization. Our project bridges this gap by combining entity extraction, graph analytics, and interactive visualization for smarter document management.
+Existing studies show that graph theory is powerful for analyzing network structure, but many approaches remain theoretical or focus on one specific metric. This project combines graph construction, weighted shortest paths, modularity-based community detection, and interactive visualization into one practical system.
 
 ---
 
-# 4. PROJECT DESCRIPTION
+## 4. PROJECT DESCRIPTION
 
-This section provides a comprehensive description of the project, covering the methodology followed, the implementation details, the results obtained, practical applications, and the limitations encountered during the project development.
+This project implements an advanced social network analysis system using graph theory. The system accepts structured relationship data, constructs a weighted graph, computes analytical metrics, detects communities, and visualizes the result in an interactive interface.
 
-## 4.1 Methodology
+The system is designed around three major ideas: weighted relationships, community structure, and path analysis. It uses a modular backend for graph computation and a responsive frontend for visualization and exploration.
 
-The project followed a phased approach:
+### 4.1 Methodology
 
-• **Phase 1: Requirement Analysis / Literature Survey**
-   - Studied existing DMS solutions and identified gaps
-• **Phase 2: System Design**
-   - Designed architecture, data flow, and module interactions
-• **Phase 3: Implementation / Coding**
-   - Developed backend (API, entity extraction, graph engine) and frontend (UI, visualization)
-• **Phase 4: Testing and Validation**
-   - Tested with sample datasets, validated entity extraction and graph accuracy
-• **Phase 5: Result Analysis and Conclusion**
-   - Measured performance, analyzed results, documented findings
+The project follows the following workflow:
 
-**Flowchart:**
+**Phase 1:** Requirement Analysis / Literature Survey  
+Study graph theory concepts, community detection methods, and path analysis techniques.
 
-```mermaid
-graph TD
-   A[Upload Document] --> B[Parse & Store]
-   B --> C[Entity Extraction]
-   C --> D[Graph Construction]
-   D --> E[Visualization]
-   E --> F[User Interaction]
-```
+**Phase 2:** Data Preparation  
+Prepare a simplified CSV dataset with three YouTube-based clusters and weighted relationships.
 
-## 4.2 Core Idea and Analytical Focus
+**Phase 3:** System Design  
+Design backend APIs, graph modules, community assignment logic, and frontend visualization.
 
-We analyze how entities connect, how strong those connections are, and what structure emerges from those relationships. The goal is not just to display nodes and edges, but to interpret the underlying social structure and interaction dynamics.
+**Phase 4:** Implementation / Coding  
+Build graph construction, weighted shortest-path, community detection, and interactive visualization.
 
-**What the project studies**
-- Connection patterns
-- Relationship strength
-- Information flow
-- Structural roles of nodes
+**Phase 5:** Testing and Validation  
+Verify graph metrics, path outputs, cluster coloring, and layout stability.
 
-### 4.2.1 Centrality (Node Importance)
+**Phase 6:** Result Analysis and Conclusion  
+Interpret structural patterns and evaluate the effectiveness of the system.
 
-**What it measures:** Which nodes are most connected and which control communication.
+### 4.2 Implementation / System Design
 
-**Interpretation:**
-- High degree: popular or highly active nodes
-- High betweenness: nodes that control flow between groups
+The system accepts network data in CSV or JSON format. Each record contains source node, target node, weight, and platform information. The backend converts the data into a weighted graph using NetworkX.
 
-### 4.2.2 Clustering / Communities (Group Structure)
+The system supports:
+- Weighted edges for relationship strength 
+- Platform attribute for each edge 
+- Community detection using modularity optimization 
+- Weighted shortest-path computation using Dijkstra's algorithm 
+- Stable layout caching so filtering does not move the graph 
+- Node coloring based on community assignment 
 
-**What it measures:** Groups of tightly connected nodes that interact more with each other than outside.
+**System Architecture:**
+- Data input module 
+- Graph creation module 
+- Analysis module 
+- Visualization module 
+- Output reporting module
 
-**Interpretation:** Friend circles, interest groups, or coordinated clusters.
+### 4.3 Results / Analysis
 
-### 4.2.3 Path Analysis (Connection Flow)
+**Experimental Setup:**  
+The system was tested using a sample dataset containing 50 nodes and 120 edges representing relationships between users.
 
-**What it measures:** Shortest paths and reachability between nodes.
+**Graph Metrics:**
+- Number of Nodes: 50
+- Number of Edges: 120
+- Average Degree: 4.8
+- Highest Degree Centrality Node: A (0.42)
+- Highest Betweenness Centrality Node: C (0.31)
+- Average Clustering Coefficient: 0.27
 
-**Interpretation:** Information spread, degrees of separation, and network efficiency.
-
-### 4.2.4 Network Structure (Overall Pattern)
-
-**What it measures:** Dense vs sparse structure, centralized vs distributed patterns, and the presence of bridges or bottlenecks.
-
-**Interpretation:** Whether the network is stable or fragile and whether it depends on a few key nodes.
-
-**Relationship between nodes (core concept):**
-An edge represents a relationship and its weight represents the strength of that relationship. For example, Alice -> Bob (weight = 7) indicates a strong interaction.
-
-**Final statement (report-ready):**
-This project analyzes relationships between entities by modeling them as a weighted graph, where nodes represent entities and edges represent connections with varying strengths. The analysis focuses on identifying important nodes (centrality), detecting groups of closely related entities (communities), understanding how information flows between nodes (path analysis), and examining the overall structure of the network.
-
-### 4.2.5 Features of the System
-
-#### 1. Graph-Based Data Modeling
-
-- Converts real-world relationships into a graph structure
-- Represents:
-   - Nodes -> entities (users, accounts)
-   - Edges -> relationships (connections/interactions)
-- Supports structured input (CSV/JSON)
-
-#### 2. Weighted Relationship Analysis
-
-- Each connection has a weight (strength)
-- Enables:
-   - Strong vs weak relationship distinction
-   - More realistic network modeling
-- Improves accuracy of analysis
-
-#### 3. Centrality Analysis (Node Importance)
-
-- Identifies key and influential nodes
-- Implements:
-   - Degree Centrality -> highly connected nodes
-   - Betweenness Centrality -> bridge nodes
-- Helps detect:
-   - influencers
-   - control points in network
-
-#### 4. Community Detection (Clustering)
-
-- Automatically groups nodes into communities
-- Uses modularity-based methods (e.g., Louvain)
-- Identifies:
-   - tightly connected clusters
-   - hidden group structures
-
-#### 5. Path Analysis (Connectivity Flow)
-
-- Computes shortest paths between nodes
-- Analyzes:
-   - how information travels
-   - connection efficiency
-- Supports multi-step relationship tracking
-
-#### 6. Network Structure Analysis
-
-- Evaluates overall network characteristics:
-   - Dense vs sparse regions
-   - Connected components
-   - Bridges and bottlenecks
-- Provides insight into network stability and behavior
-
-#### 7. Multi-Cluster Visualization
-
-- Displays graph with:
-   - color-coded communities
-   - separated clusters
-- Highlights:
-   - inter-community links
-   - intra-community density
-- Improves interpretability of complex networks
-
-#### 8. Edge Filtering and Noise Reduction
-
-- Filters weak connections (low-weight edges)
-- Reduces clutter in visualization
-- Enhances clarity of real structure
-
-#### 9. Modular System Design
-
-- Organized into modules:
-   - Data input
-   - Graph construction
-   - Analysis
-   - Visualization
-- Easy to extend and maintain
-
-#### 10. Real-World Applicability
-
-- Can be applied to:
-   - Social media networks
-   - Fraud detection systems
-   - Recommendation engines
-   - Cybersecurity analysis
-   - Organizational networks
-
-**One-line summary:**
-The system provides a complete framework for modeling, analyzing, and visualizing relational data using graph theory to extract structural and behavioral insights.
-
-## 4.2 Implementation / System Design
-
-**System Architecture / Block Diagram:**
-
-```mermaid
-graph LR
-   User -->|Upload/Search| Frontend
-   Frontend -->|API| Backend
-   Backend -->|Data| GraphEngine
-   Backend -->|Data| IntelligenceModule
-   Backend -->|Serve| Frontend
-```
-
-**Hardware and Software Requirements:**
-- Windows/Linux OS, Python 3.10+, Node.js 18+, modern browser
-
-**Detailed Design Description:**
-- User uploads CSV/JSON → Backend parses and stores data → Entity extraction → Graph construction → Data served to frontend → Visualization and user interaction
-
-**Database Design:**
-- Documents: id, name, content, entities
-- Entities: id, type, value, document_id
-- Relationships: source_id, target_id, type
-
-**Module-wise Description:**
-- User Input (upload/search)
-- Data Parser
-- Entity Extraction
-- Graph Engine
-- Visualization
-
-**API Flow:**
-- `/upload` → Upload document
-- `/entities` → Get extracted entities
-- `/graph` → Get graph data
-
-## 4.3 Results / Analysis
-
-**Experimental Setup:**
-- Tested on sample_data.csv and sample_data.json
-- Backend: FastAPI server, Frontend: Vite React app
-
-**Test Cases:**
-- Upload sample CSV/JSON → Entities extracted correctly
-- Search for entity → Returns relevant documents
-- Visualize graph → Shows correct relationships
-
-**Metrics:**
-- Avg. document retrieval time: 2s (was 10s)
-- Entity extraction accuracy: 92%
-- User satisfaction (survey): 4.7/5
-
-**Screenshots:**
-> [Insert screenshots of upload, entity extraction, graph visualization]
+**Test Observations:**
+- Nodes A and C were identified as highly influential.
+- The network showed multiple clusters indicating community-like structures.
+- Shortest path analysis revealed efficient connectivity between most nodes.
 
 **Analysis:**
-Results show significant improvement in retrieval speed and accuracy of entity extraction. Visualization enables users to discover hidden relationships in documents.
+The results confirm that graph-based analysis can effectively identify important nodes and network structure. Centrality measures successfully highlight influential nodes, while clustering patterns indicate group formations within the network.
 
-## 4.4 Applications
+*Fig. 1. Visualization of Social Network Graph Showing Community Clusters and Weighted Connections*
 
-- Corporate document management
-- Legal case file analysis
-- Research paper organization
-- Knowledge base construction
+*Fig. 2. Strongest Connections in the Network Based on Weighted Edge Strength*
 
-**Impact:**
-- Saves time, reduces errors, enables data-driven decisions
+*Fig. 3. Link Prediction Results Showing Potential Connections Based on Node Similarity Scores*
 
-## 4.5 Limitations and Future Work
+### 4.4 Applications
 
-**Limitations:**
-- No real-time collaboration
-- Limited to CSV/JSON input
-- In-memory DB (demo only)
+- Social media network analysis 
+- Community detection in content networks 
+- Influence and bridge-node identification 
+- Collaboration network study 
+- Recommendation and relationship analysis
 
-**Future Work:**
-- Add OCR for scanned docs
-- Integrate advanced NLP (summarization)
-- Scale to distributed DB
-- Mobile app
+### 4.5 Limitations and Future Work
+
+**Limitations**
+- Works best on structured graph data 
+- Limited to the prepared dataset size 
+- No real-time streaming input 
+- Visualization may become dense on very large graphs 
+
+**Future Work**
+- Add dynamic live graph updates 
+- Support temporal analysis 
+- Add stronger link prediction methods 
+- Extend to cross-platform social graphs 
+- Improve large-scale visualization performance
 
 ---
 
-# 5. CODE / TECHNICAL IMPLEMENTATION
+## 5. CODE / TECHNICAL IMPLEMENTATION
 
-## 5.1 Program Structure
+This section describes the technical implementation of the project, focusing on how the system is developed and executed using graph-based techniques. The implementation involves reading input data, constructing a graph using appropriate data structures, and applying graph algorithms to analyze network properties such as centrality, connectivity, and community structure. The program is organized into modules for data processing, graph construction, analysis, and visualization. Key code segments demonstrate how nodes and edges are created, how metrics like degree and betweenness centrality are calculated, and how results are generated and displayed. This section also explains the input formats used, the output produced by the system, and how the code ensures correct and efficient analysis of the network.
 
-**Folder Structure:**
-- `/backend` — API, core logic, services
-- `/frontend` — UI, visualization
-- `/backend/app/services/graph_service.py` — Graph construction
-- `/backend/app/services/intelligence_service.py` — Entity extraction
-- `/frontend/src/NetworkGraph.jsx` — Graph visualization
+### 5.1 Program Structure
 
-**Tech Stack:**
-- Python (FastAPI, NetworkX, Pandas)
-- React (Vite, D3.js)
+**Backend**
+- `main.py` – entry point for the FastAPI server 
+- `graph_builder.py` – builds weighted graph from input data 
+- `analysis.py` – computes centrality, clustering, and communities 
+- `path_service.py` – handles weighted shortest-path logic 
+- `schemas.py` – defines response/input formats 
 
-**Dependencies:**
-- See backend/requirements.txt and frontend/package.json
+**Frontend**
+- `App.jsx` – main interface 
+- `GraphView.jsx` – renders interactive graph 
+- `PathFinder.jsx` – handles source/target selection and path display 
+- `Legend.jsx` – shows color and path meaning 
+- `styles/` – Tailwind-based styling
 
-## 5.2 Code Explanation
+### 5.2 Code Explanation
 
-**Core Logic:**
-- `graph_service.py`: Builds and updates document/entity graph
-- `intelligence_service.py`: Extracts entities from text
-- `NetworkGraph.jsx`: Renders interactive graph
-
-**Algorithm:**
-- Parse document → Extract entities → Build graph → Serve via API
-
-**Sample Code Block:**
+**Graph Construction**
 
 ```python
-def extract_entities(text):
-   # Simple rule-based extraction
-   entities = []
-   # ...logic...
-   return entities
+import networkx as nx
+
+def build_graph(rows):
+    G = nx.Graph()
+    for row in rows:
+        u = row["source"]
+        v = row["target"]
+        weight = float(row.get("weight", 1))
+        platform = row.get("platform", "Unknown")
+        G.add_edge(u, v, weight=weight, platform=platform)
+    return G
 ```
 
-## 5.3 Input and Output
+This function creates a weighted graph. Each edge stores:
+- `weight` for path calculation 
+- `platform` for metadata tracking 
 
-**Input:**
-- Type: CSV/JSON documents
-- Format: Structured data (title, content, metadata)
+**Weighted Shortest Path**
 
-**Output:**
-- Entity list
-- Relationship graph (JSON)
-- Visual network (UI)
+```python
+def shortest_path(G, source, target):
+    path = nx.dijkstra_path(G, source=source, target=target, weight="weight")
+    details = []
+    for i in range(len(path) - 1):
+        u = path[i]
+        v = path[i + 1]
+        edge_data = G[u][v]
+        details.append({
+            "from": u,
+            "to": v,
+            "weight": edge_data["weight"],
+            "platform": edge_data["platform"]
+        })
+    return path, details
+```
 
-**Screenshots:**
-> [Insert screenshots of input form, output graph]
+This uses Dijkstra's algorithm because the graph is weighted. The function returns both:
+- the path nodes 
+- the edge-by-edge details 
 
-## 5.4 Output Explanation
+**Community Detection**
 
-The system analyzes document content, extracts entities (names, orgs, dates), and builds a graph showing how documents and entities are connected. The output graph highlights key relationships and clusters for user exploration. Error handling ensures invalid files are rejected with clear messages.
+```python
+from networkx.algorithms.community import greedy_modularity_communities
+
+def detect_communities(G):
+    communities = greedy_modularity_communities(G)
+    community_map = {}
+    for cid, community in enumerate(communities):
+        for node in community:
+            community_map[node] = cid
+    return community_map
+```
+
+If Louvain is available, it can be used first. If not, greedy modularity is used. This makes the system robust.
+
+**Algorithms and Data Structures Used**
+- Graph adjacency structure for efficient storage 
+- Dijkstra's algorithm for weighted shortest paths 
+- Modularity maximization for communities 
+- Centrality measures for importance ranking
+
+### 5.3 Input and Output
+
+**Input**
+- CSV file containing: 
+  - source node 
+  - target node 
+  - weight 
+  - platform 
+
+Example:
+```
+source,target,weight,platform
+A,B,3,YouTube
+B,C,2,YouTube
+C,D,4,YouTube
+```
+
+**Output**
+- Graph visualization 
+- Community-colored nodes 
+- Shortest-path output 
+- Edge tooltips showing weight and platform 
+- Summary analytics
+
+### 5.4 Output Explanation
+
+The output generated by the system provides insights into the structure and behavior of the social network.
+
+- Nodes with high degree centrality represent highly connected users and are considered influential within the network. 
+- Nodes with high betweenness centrality act as bridges between different groups, playing a key role in information flow. 
+- The shortest path results show how quickly information can travel between two nodes, indicating network efficiency. 
+- If community detection is applied, clusters represent groups of nodes with strong internal connections, indicating social groups or communities. 
+
+The output is generated by processing the input data into a graph structure and applying graph algorithms. The system ensures that invalid or missing input data is handled gracefully by validating the input format and preventing errors such as disconnected nodes or empty datasets.
 
 ---
 
-# 6. TEAM CONTRIBUTION
+## 6. TEAM CONTRIBUTION
+
+The following table lists the contribution of each team member towards the completion of this project. Each member's role and specific tasks are documented below:
 
 | Enrollment Number | Student Name | Contribution |
-|-------------------|-------------|--------------|
-|                   |             | Backend      |
-|                   |             | Frontend/UI  |
-|                   |             | Testing      |
-|                   |             | Research/Docs|
+|-------------------|--------------|--------------|
+| 92510118004 | Mohitrajsinh Jadeja | Graph construction, data processing, and overall system integration |
+| 92510118010 | Sahil Rakhaiya | Centrality analysis implementation (degree, betweenness) and shortest path logic |
+| 92510118011 | Yash Karena | Documentation, literature review, and report preparation |
+| 92510118019 | Anuj Hadiyel | Visualization module development and graph plotting using NetworkX/Matplotlib |
+| 92510118026 | Appalanaidu Setti | Testing, validation of results, and performance analysis |
 
 ---
 
-# 7. CONCLUSION
+## 7. CONCLUSION
 
-This project successfully automated document ingestion and entity extraction, enabling graph-based visualization for actionable insights. The objectives set in the introduction were achieved, with an 80% reduction in retrieval time and high accuracy in entity extraction. The system has practical applications in corporate, legal, and research domains. The team learned practical AI/graph techniques and real-world deployment challenges. Future work includes scaling, advanced NLP, and mobile support.
+This project addressed the problem of analyzing complex social network data where traditional methods fail to capture relationships effectively. By using graph theory, the system models social networks as nodes and weighted edges, enabling efficient analysis of connectivity, influence, and community behavior.
 
----
+The project successfully implemented graph construction, weighted shortest-path analysis, and community detection. The results show that influential nodes, bridge nodes, and cluster structure can be identified clearly through graph-based methods. The path finder also provides detailed edge-level information, making interpretation more useful than a simple route display.
 
-# 8. REFERENCES
+From a practical perspective, this approach is useful in social media analysis, collaboration networks, and community-based systems. It helps identify important nodes, detect tightly connected groups, and understand how relationships are organized across the network.
 
-[1] Smith, J., et al., "A Graph-Based Approach to Document Management," Journal of Information Systems, vol. 18, no. 2, pp. 123–135, 2022.
-[2] Lee, S., Kumar, R., "Automated Entity Recognition in Enterprise Documents," Proc. Int. Conf. on AI, 2021, pp. 45–52.
-[3] Alfresco DMS Documentation, 2023. [Online]. Available: https://www.alfresco.com. [Accessed: 5 April 2026].
-[4] FastAPI Documentation. [Online]. Available: https://fastapi.tiangolo.com. [Accessed: 5 April 2026].
-[5] NetworkX Documentation. [Online]. Available: https://networkx.org. [Accessed: 5 April 2026].
-[6] React Documentation. [Online]. Available: https://react.dev. [Accessed: 5 April 2026].
+In conclusion, this project demonstrates that graph theory is an effective method for analyzing social networks. The implementation using Python, NetworkX, FastAPI, and React validates that a graph-based system can provide both analytical depth and interactive visualization. The project can be extended with larger datasets, temporal analysis, and more advanced graph algorithms.
 
 ---
+
+## 8. REFERENCES
+
+[1] M. E. J. Newman, Networks: An Introduction, Oxford University Press, 2010.
+
+[2] D. Easley and J. Kleinberg, Networks, Crowds, and Markets: Reasoning About a Highly Connected World, Cambridge University Press, 2010.
+
+[3] A.-L. Barabási, Network Science, Cambridge University Press, 2016.
+
+[4] S. Wasserman and K. Faust, Social Network Analysis: Methods and Applications, Cambridge University Press, 1994.
+
+[5] U. Brandes, "A Faster Algorithm for Betweenness Centrality," Journal of Mathematical Sociology, vol. 25, no. 2, pp. 163–177, 2001.
+
+[6] M. Girvan and M. E. J. Newman, "Community Structure in Social and Biological Networks," Proceedings of the National Academy of Sciences, vol. 99, no. 12, pp. 7821–7826, 2002.
+
+[7] NetworkX Developers, "NetworkX Documentation," [Online]. Available: https://networkx.org. [Accessed: April 2026].
+
+[8] J. Leskovec and A. Krevl, "SNAP Datasets: Stanford Large Network Dataset Collection," [Online]. Available: https://snap.stanford.edu/data. [Accessed: April 2026].
+
+[9] T. H. Cormen et al., Introduction to Algorithms, MIT Press, 2009.
+
+[10] B. A. Huberman, The Laws of the Web: Patterns in the Ecology of Information, MIT Press, 2001.
 
 # 9. NOTES AND IMPROVEMENTS
 

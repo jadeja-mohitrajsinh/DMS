@@ -1,12 +1,17 @@
-source,target,weight,platform
-YT_Alpha_A,YT_Alpha_B,7.0,YouTube
-YT_Alpha_B,YT_Alpha_C,6.0,YouTube
-YT_Alpha_C,YT_Alpha_A,5.0,YouTube
+Source,Target,Weight,Type
 
-YT_Beta_A,YT_Beta_B,7.0,YouTube
-YT_Beta_B,YT_Beta_C,6.0,YouTube
-YT_Beta_C,YT_Beta_A,5.0,YouTube
+# ================= CLUSTER 1: LEGITIMATE USER
+User_John,Bank_Account_John,8,Account_Owner
 
-YT_Gamma_A,YT_Gamma_B,7.0,YouTube
-YT_Gamma_B,YT_Gamma_C,6.0,YouTube
-YT_Gamma_C,YT_Gamma_A,5.0,YouTube
+# ================= CLUSTER 2: PHISHING ATTACK
+Phishing_Email,User_John,9,Phishing_Link
+
+# ================= CLUSTER 3: FAKE ACCOUNTS
+Hacker_Bot,Fake_Account_XYZ,9,Bot_Control
+Fake_Account_XYZ,Fake_Account_ABC,7,Shared_Network
+
+# ================= THE FRAUD TRANSACTION PATH
+User_John,Bank_Account_John,8,Initial_Balance
+Bank_Account_John,Fake_Account_XYZ,9,FRAUD_Transfer_$5000
+Fake_Account_XYZ,Bitcoin_Wallet,9,Money_Conversion
+

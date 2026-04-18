@@ -1,9 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
-import json
-import random
-import datetime
 from typing import List, Dict, Any, Optional
 
 from .services.graph_service import graph_service
@@ -42,88 +39,46 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# --- Simulation Worker (Simulating Real-Time Stream) ---
+# --- Seed Loader (One-Time Load from CSV) ---
 async def data_stream_worker():
-    """Background task to simulate streaming social media interactions using advanced_data.csv seed."""
-    import pandas as pd
+    """Loads interactions from advanced_data.csv only (no live simulation)."""
     import os
-    
-    # Try to load names/platforms from the CSV seed using absolute path
+
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     seed_csv = os.path.join(base_dir, "advanced_data.csv")
-    
-    names = ["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace", "Henry"]
-    platforms = ["Twitter", "LinkedIn", "YouTube"]
-    
-    if os.path.exists(seed_csv):
-        try:
-            df = pd.read_csv(seed_csv)
-            # Combine source and target lists to get a unique set of names
-            names = [str(n) for n in list(set(df['source'].unique()) | set(df['target'].unique()))]
-            platforms = [str(p) for p in list(df['platform'].unique())]
-            
-            # Initial Load: Add pre-existing edges to the graph
-            for _, row in df.iterrows():
-                graph_service.add_interaction(str(row['source']), str(row['target']), weight=row['weight'], platform=row['platform'])
-            graph_service.update_communities()
-            print(f"Loaded {len(df)} initial interactions from {seed_csv}")
-        except Exception as e:
-            print(f"Error loading seed data: {e}. Falling back to defaults.")
-    else:
-        print(f"Seed file not found at: {seed_csv}. Using defaults.")
 
-    def group_key(name: str) -> str:
-        parts = name.split('_', 1)
-        if len(parts) > 1 and parts[0] in {"Bio", "Fin", "Media", "Hacker"}:
-            return parts[0]
-        return "Core"
+    if not os.path.exists(seed_csv):
+        print(f"Seed file not found at: {seed_csv}")
+        return
 
-    groups: Dict[str, List[str]] = {}
-    for n in names:
-        groups.setdefault(group_key(n), []).append(n)
-    
-    print(f"Real-time simulation pool: {len(names)} influencers, {len(platforms)} platforms.")
-    while True:
-        try:
-            # Simulate an incoming interaction
-            if random.random() < 0.85:
-                group = random.choice([g for g in groups.values() if len(g) >= 2])
-                source, target = random.sample(group, 2)
-                weight = 0.8 + random.random() * 1.8
-            else:
-                g1, g2 = random.sample([g for g in groups.values() if len(g) >= 1], 2)
-                source = random.choice(g1)
-                target = random.choice(g2)
-                weight = 0.4 + random.random() * 0.8
-            platform = random.choice(platforms)
-            
-            # Update the graph service
-            graph_service.add_interaction(source, target, weight=weight, platform=platform)
-            
-            # Periodically update analysis
-            if random.random() < 0.3: # 30% chance to refresh communities each update
-                graph_service.update_communities()
-            
-            # Signal to all connected clients
-            msg = {
-                "type": "NEW_INTERACTION",
-                "data": {
-                    "source": source,
-                    "target": target,
-                    "platform": platform,
-                    "timestamp": datetime.datetime.now().isoformat()
-                },
-                "stats": {
-                    "nodes": graph_service.G.number_of_nodes(),
-                    "edges": graph_service.G.number_of_edges()
-                }
-            }
-            await manager.broadcast(msg)
-            
-            await asyncio.sleep(4) # Stream every 4 seconds for visual stability
-        except Exception as e:
-            print(f"Worker Error: {e}")
-            await asyncio.sleep(5)
+    edges = []
+    try:
+        with open(seed_csv, "r", encoding="utf-8") as f:
+            for raw in f:
+                line = raw.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = [p.strip() for p in line.split(",")]
+                if len(parts) < 4:
+                    continue
+                source, target, weight_text, platform = parts[:4]
+                try:
+                    weight = float(weight_text)
+                except ValueError:
+                    continue
+                edges.append((source, target, weight, platform))
+    except Exception as e:
+        print(f"Error reading seed data: {e}")
+        return
+
+    if not edges:
+        print("Seed file contains no valid interactions.")
+        return
+
+    for source, target, weight, platform in edges:
+        graph_service.add_interaction(source, target, weight=weight, platform=platform)
+    graph_service.update_communities()
+    print(f"Loaded {len(edges)} interactions from {seed_csv}")
 
 @app.on_event("startup")
 async def startup_event():
@@ -151,6 +106,10 @@ async def get_pulse():
 @app.get("/network-summary")
 async def get_network_summary():
     return graph_service.get_network_summary()
+
+@app.get("/analysis")
+async def get_analysis():
+    return graph_service.get_graph_analysis()
 
 @app.get("/predict-links")
 async def predict():

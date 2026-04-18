@@ -1,12 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 
-const NetworkGraph = ({ data, visibleLinks = [], onNodeClick, highlightedEdges = [] }) => {
+const NetworkGraph = ({ data, visibleLinks = [], onNodeClick, highlightedEdges = [], mstEdges = [], bridgeEdges = [] }) => {
   const d3Container = useRef(null);
   const simulationRef = useRef(null);
   const svgRef = useRef(null);
   const gRef = useRef(null);
   const linkGroupRef = useRef(null);
+  const packetGroupRef = useRef(null);
   const nodeGroupRef = useRef(null);
   const labelGroupRef = useRef(null);
   const positionsRef = useRef(new Map());
@@ -14,30 +15,93 @@ const NetworkGraph = ({ data, visibleLinks = [], onNodeClick, highlightedEdges =
 
   // Initialize SVG and Simulation ONCE
   useEffect(() => {
+    if (!d3Container.current) return;
+    
     const width = 800;
     const height = 600;
 
     const svg = d3.select(d3Container.current)
-      .attr("viewBox", [0, 0, width, height]);
+      .attr("width", width)
+      .attr("height", height)
+      .attr("viewBox", `0 0 ${width} ${height}`)
+      .attr("preserveAspectRatio", "xMidYMid meet")
+      .style("background", "#0a0a0a")
+      .style("border", "1px solid #1f2937")
+      .style("display", "block");
     svgRef.current = svg;
 
-    const g = svg.append("g");
+    const g = svg.append("g")
+      .attr("transform", "translate(0,0)");
     gRef.current = g;
 
     // Zoom & Pan
-    svg.call(d3.zoom().on("zoom", (event) => {
-      g.attr("transform", event.transform);
-    }));
+    const zoom = d3.zoom()
+      .scaleExtent([0.5, 5])
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform);
+      });
+    svg.call(zoom);
+
+    // Initial zoom reset
+    svg.call(zoom.transform, d3.zoomIdentity.translate(0, 0).scale(1));
 
     linkGroupRef.current = g.append("g").attr("class", "links");
+    packetGroupRef.current = g.append("g").attr("class", "packets");
     nodeGroupRef.current = g.append("g").attr("class", "nodes");
     labelGroupRef.current = g.append("g").attr("class", "labels");
 
+    // Add SVG styles for animations
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse-glow {
+        0%, 100% { filter: drop-shadow(0 0 2px rgba(239, 68, 68, 0.3)); }
+        50% { filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.8)); }
+      }
+      @keyframes packet-flow {
+        0% { offset-distance: 0%; opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        100% { offset-distance: 100%; opacity: 0; }
+      }
+      .pulse-line { animation: pulse-glow 2s infinite; }
+      .animated-packet {
+        r: 5;
+        fill: #ef4444;
+        filter: drop-shadow(0 0 3px #ef4444);
+      }
+      .packet-label {
+        font-size: 9px;
+        fill: #fff;
+        font-weight: bold;
+        text-anchor: middle;
+        pointer-events: none;
+        text-shadow: 0 0 3px rgba(0,0,0,0.8);
+      }
+      .packet-type-fraud {
+        fill: #ef4444;
+        filter: drop-shadow(0 0 5px #ef4444);
+      }
+      .packet-type-phishing {
+        fill: #f97316;
+        filter: drop-shadow(0 0 5px #f97316);
+      }
+      .packet-type-transfer {
+        fill: #eab308;
+        filter: drop-shadow(0 0 5px #eab308);
+      }
+    `;
+    if (!document.querySelector('style[data-packet-animation]')) {
+      style.setAttribute('data-packet-animation', 'true');
+      document.head.appendChild(style);
+    }
+
     const simulation = d3.forceSimulation()
-      .force("link", d3.forceLink().id(d => d.id).distance(160))
-      .force("charge", d3.forceManyBody().strength(-220))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(34));
+      .force("link", d3.forceLink().id(d => d.id).distance(130))
+      .force("charge", d3.forceManyBody().strength(-280).distanceMax(400))
+      .force("center", d3.forceCenter(width / 2, height / 2).strength(0.1))
+      .force("collision", d3.forceCollide().radius(38).strength(0.85))
+      .alphaDecay(0.015)
+      .velocityDecay(0.35);
 
     simulation.on("tick", () => {
       linkGroupRef.current.selectAll("line")
@@ -57,11 +121,108 @@ const NetworkGraph = ({ data, visibleLinks = [], onNodeClick, highlightedEdges =
       simulation.nodes().forEach((n) => {
         positionsRef.current.set(n.id, { x: n.x, y: n.y });
       });
+
+      // Update cluster boundaries on each tick
+      const communityIds = Array.from(new Set(simulation.nodes().map(n => n.community ?? 0)));
+      updateClusterBoundaries(communityIds);
     });
+
+    const updateClusterBoundaries = (communityIds) => {
+      const nodes = simulation.nodes();
+      
+      // Calculate centroid and radius for each community
+      const clusterMetrics = new Map();
+      communityIds.forEach(communityId => {
+        const communityNodes = nodes.filter(n => (n.community ?? 0) === communityId);
+        
+        if (communityNodes.length === 0) {
+          clusterMetrics.set(communityId, {
+            cx: width / 2,
+            cy: height / 2,
+            radius: 100,
+            nodes: 0
+          });
+          return;
+        }
+
+        // Calculate centroid
+        const centroid = {
+          x: communityNodes.reduce((sum, n) => sum + (n.x || 0), 0) / communityNodes.length,
+          y: communityNodes.reduce((sum, n) => sum + (n.y || 0), 0) / communityNodes.length
+        };
+
+        // Calculate radius as max distance from centroid + padding
+        const maxDistance = Math.max(
+          ...communityNodes.map(n => {
+            const dx = (n.x || 0) - centroid.x;
+            const dy = (n.y || 0) - centroid.y;
+            return Math.sqrt(dx * dx + dy * dy);
+          }),
+          30 // minimum for single-node clusters
+        );
+
+        clusterMetrics.set(communityId, {
+          cx: centroid.x,
+          cy: centroid.y,
+          radius: maxDistance + 55, // 55px padding
+          nodes: communityNodes.length
+        });
+      });
+
+      // Update or create cluster boundary circles
+      const hull = gRef.current.selectAll("circle.community-halo")
+        .data(communityIds, d => d);
+
+      hull.exit().remove();
+
+      hull.enter()
+        .insert("circle", ":first-child")
+        .attr("class", "community-halo")
+        .attr("fill", "none")
+        .attr("stroke", "#4b5563")
+        .attr("stroke-dasharray", "8 5")
+        .attr("stroke-width", 1.5)
+        .attr("stroke-linecap", "round")
+        .attr("opacity", 0.5)
+        .attr("filter", "url(#cluster-glow)")
+        .merge(hull)
+        .transition()
+        .duration(100)
+        .attr("cx", d => clusterMetrics.get(d).cx)
+        .attr("cy", d => clusterMetrics.get(d).cy)
+        .attr("r", d => clusterMetrics.get(d).radius)
+        .attr("opacity", d => {
+          const nodeCount = clusterMetrics.get(d).nodes;
+          return Math.min(0.6, 0.3 + nodeCount * 0.05);
+        });
+    };
 
     simulationRef.current = simulation;
 
-    return () => simulation.stop();
+    // Force continuous animation for packets
+    let animationFrameId;
+    const animatePackets = () => {
+      if (packetGroupRef.current) {
+        packetGroupRef.current.selectAll(".packet-group")
+          .attr("transform", d => {
+            const link = d.link;
+            if (!link.source || !link.target) return "translate(0,0)";
+            // SLOWER animation: duration is 5000-10000ms
+            const elapsed = Date.now() % (d.duration || 5000);
+            const progress = elapsed / (d.duration || 5000);
+            const x = link.source.x + (link.target.x - link.source.x) * progress;
+            const y = link.source.y + (link.target.y - link.source.y) * progress;
+            return `translate(${x},${y})`;
+          });
+      }
+      animationFrameId = requestAnimationFrame(animatePackets);
+    };
+    animationFrameId = requestAnimationFrame(animatePackets);
+
+    return () => {
+      simulation.stop();
+      cancelAnimationFrame(animationFrameId);
+    };
   }, []);
 
   // Update Data Incrementally
@@ -162,6 +323,8 @@ const NetworkGraph = ({ data, visibleLinks = [], onNodeClick, highlightedEdges =
       };
       visibleLinks.forEach(addLink);
       highlightedEdges.forEach(addLink);
+      mstEdges.forEach(addLink);
+      bridgeEdges.forEach(addLink);
       return all;
     })();
     const displayLinks = renderLinks.map((l) => {
@@ -188,6 +351,12 @@ const NetworkGraph = ({ data, visibleLinks = [], onNodeClick, highlightedEdges =
     const highlightedSet = new Set(
       highlightedEdges.map((e) => `${e.source}-${e.target}`)
     );
+    const mstSet = new Set(
+      mstEdges.map((e) => `${e.source}-${e.target}`)
+    );
+    const bridgeSet = new Set(
+      bridgeEdges.map((e) => `${e.source}-${e.target}`)
+    );
 
     linkMerge
       .attr("stroke", d => {
@@ -195,6 +364,12 @@ const NetworkGraph = ({ data, visibleLinks = [], onNodeClick, highlightedEdges =
         const targetId = typeof d.target === 'object' ? d.target.id : d.target;
         if (highlightedSet.has(`${sourceId}-${targetId}`) || highlightedSet.has(`${targetId}-${sourceId}`)) {
           return '#ef4444';
+        }
+        if (mstSet.has(`${sourceId}-${targetId}`) || mstSet.has(`${targetId}-${sourceId}`)) {
+          return '#22c55e';
+        }
+        if (bridgeSet.has(`${sourceId}-${targetId}`) || bridgeSet.has(`${targetId}-${sourceId}`)) {
+          return '#f59e0b';
         }
         const source = nodeById.get(sourceId);
         const target = nodeById.get(targetId);
@@ -215,6 +390,12 @@ const NetworkGraph = ({ data, visibleLinks = [], onNodeClick, highlightedEdges =
         if (highlightedSet.has(`${sourceId}-${targetId}`) || highlightedSet.has(`${targetId}-${sourceId}`)) {
           return Math.log(d.weight + 1) * 2.6 + 1.6;
         }
+        if (mstSet.has(`${sourceId}-${targetId}`) || mstSet.has(`${targetId}-${sourceId}`)) {
+          return Math.log(d.weight + 1) * 2.2 + 1.4;
+        }
+        if (bridgeSet.has(`${sourceId}-${targetId}`) || bridgeSet.has(`${targetId}-${sourceId}`)) {
+          return Math.log(d.weight + 1) * 2.0 + 1.2;
+        }
         return Math.log(d.weight + 1) * 1.6 + 0.8;
       })
       .attr("stroke-opacity", d => {
@@ -224,6 +405,8 @@ const NetworkGraph = ({ data, visibleLinks = [], onNodeClick, highlightedEdges =
           if (highlightedSet.has(`${sourceId}-${targetId}`) || highlightedSet.has(`${targetId}-${sourceId}`)) return 1;
           return 0.2;
         }
+        if (mstSet.has(`${sourceId}-${targetId}`) || mstSet.has(`${targetId}-${sourceId}`)) return 0.9;
+        if (bridgeSet.has(`${sourceId}-${targetId}`) || bridgeSet.has(`${targetId}-${sourceId}`)) return 0.85;
         const source = nodeById.get(sourceId);
         const target = nodeById.get(targetId);
         if (source && target && source.community !== target.community) return 0.8;
@@ -238,6 +421,91 @@ const NetworkGraph = ({ data, visibleLinks = [], onNodeClick, highlightedEdges =
         const targetId = typeof d.target === 'object' ? d.target.id : d.target;
         return `${sourceId} -> ${targetId} | weight: ${d.weight ?? 1} | platform: ${d.platform || 'Unknown'}`;
       });
+
+      // --- Animated Packet Flow (Cisco Packet Tracer Style) ---
+      // Create packet data: only on critical weight >= 8 links
+      const packetData = displayLinks
+        .filter(d => (d.weight ?? 1) >= 8) // Only CRITICAL links
+        .map((link, i) => {
+          const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+          const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+          
+          // Safely determine packet type and symbol
+          let packetType = 'transfer';
+          let symbol = '📦';
+          const typeStr = (link.type || '').toString().toLowerCase();
+          
+          if (typeStr.includes('fraud')) {
+            packetType = 'fraud';
+            symbol = '⚠️'; // Warning symbol
+          } else if (typeStr.includes('phishing') || typeStr.includes('malicious')) {
+            packetType = 'phishing';
+            symbol = '🎣'; // Phishing hook
+          } else if (typeStr.includes('transfer')) {
+            packetType = 'transfer';
+            symbol = '💰'; // Money
+          } else if (typeStr.includes('bitcoin') || typeStr.includes('crypto')) {
+            packetType = 'crypto';
+            symbol = '₿'; // Bitcoin symbol
+          }
+          
+          return {
+            id: linkKey(link),
+            link: link,
+            weight: link.weight ?? 1,
+            type: link.type || 'Data',
+            sourceId: sourceId,
+            targetId: targetId,
+            packetType: packetType,
+            symbol: symbol,
+            duration: 5000 + i * 1000, // SLOW animation: 5-10 seconds per packet
+            delay: i * 1500 // Delay between packets
+          };
+        });
+
+      const packets = packetGroupRef.current.selectAll(".animated-packet")
+        .data(packetData, d => d.id);
+
+      packets.exit().remove();
+
+      packets.enter()
+        .append("g")
+        .attr("class", "packet-group")
+        .append("circle")
+        .attr("class", d => `animated-packet packet-type-${d.packetType}`)
+        .attr("r", 7)
+        .merge(packets.selectAll("circle"))
+        .attr("fill", d => {
+          switch(d.packetType) {
+            case 'fraud': return "#ef4444";      // Red
+            case 'phishing': return "#f97316";   // Orange
+            case 'crypto': return "#8b5cf6";     // Purple
+            case 'transfer': return "#eab308";   // Yellow
+            default: return "#3b82f6";            // Blue
+          }
+        });
+
+      // Add text labels to packets
+      packetGroupRef.current.selectAll(".packet-group")
+        .data(packetData, d => d.id)
+        .selectAll("text")
+        .data(d => [d])
+        .join("text")
+        .attr("class", "packet-label")
+        .attr("dy", "0.3em")
+        .attr("font-size", "11px")
+        .text(d => d.symbol);
+
+      // Add title/tooltip for each packet
+      packetGroupRef.current.selectAll(".packet-group")
+        .data(packetData, d => d.id)
+        .selectAll("title")
+        .data(d => [d])
+        .join("title")
+        .text(d => `${d.sourceId} → ${d.targetId}\n${d.type}\n(Weight: ${d.weight})`);
+
+      // Apply pulsing effect to ONLY the most critical transaction links
+      linkMerge.classed("pulse-line", d => (d.weight ?? 0) >= 9);
 
     if (isDataChange) {
       // --- Join Nodes ---
@@ -279,51 +547,171 @@ const NetworkGraph = ({ data, visibleLinks = [], onNodeClick, highlightedEdges =
     }
 
     if (isDataChange) {
-      // Update simulation
+      // Initialize node positions clustered by community
       nodes.forEach((n) => {
         const center = communityCenters.get(n.community ?? 0) || { x: width / 2, y: height / 2 };
         if (n.x === undefined || n.y === undefined) {
-          const jitter = 35;
+          const jitter = 45;
           n.x = center.x + (Math.random() - 0.5) * jitter;
           n.y = center.y + (Math.random() - 0.5) * jitter;
         }
       });
-      simulation.nodes(nodes);
-      simulation.force("link").links(links);
-      simulation.force("link").strength((d) => {
-        const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
-        const targetId = typeof d.target === 'object' ? d.target.id : d.target;
-        const source = nodeById.get(sourceId);
-        const target = nodeById.get(targetId);
-        if (source && target && source.community !== target.community) return 0.03;
-        return 0.12;
-      });
-      simulation
-        .force("x", d3.forceX(d => (communityCenters.get(d.community ?? 0) || { x: width / 2 }).x).strength(0.85))
-        .force("y", d3.forceY(d => (communityCenters.get(d.community ?? 0) || { y: height / 2 }).y).strength(0.85))
-        .force("radial", d3.forceRadial(clusterRadius, width / 2, height / 2).strength(0.05))
-        .force("outlierX", d3.forceX(d => (d.is_outlier ? width * 0.12 : width / 2)).strength(0.35))
-        .force("outlierY", d3.forceY(d => (d.is_outlier ? height * 0.12 : height / 2)).strength(0.35))
-        .force("hubRadial", d3.forceRadial(d => (d.is_hub ? clusterRadius + 80 : clusterRadius), width / 2, height / 2).strength(0.12));
 
-      const hull = gRef.current.selectAll("circle.community-halo")
-        .data(communityIds, d => d);
-      hull.exit().remove();
-      hull.enter()
-        .insert("circle", ":first-child")
-        .attr("class", "community-halo")
-        .attr("fill", "none")
-        .attr("stroke", "#1f2937")
-        .attr("stroke-dasharray", "6 6")
-        .attr("stroke-width", 1.2)
-        .attr("opacity", 0.7)
-        .merge(hull)
-        .attr("cx", d => (communityCenters.get(d) || { x: width / 2 }).x)
-        .attr("cy", d => (communityCenters.get(d) || { y: height / 2 }).y)
-        .attr("r", 110 + Math.min(80, communityCount * 6));
+      simulation.nodes(nodes);
       
-      // Pulse the alpha so things move gently to their new spots
-      simulation.alpha(0.12).restart();
+      // Link distance: Intra-cluster = short, Inter-cluster = long
+      simulation.force("link")
+        .links(links)
+        .distance((d) => {
+          const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+          const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+          const source = nodeById.get(sourceId);
+          const target = nodeById.get(targetId);
+          if (source && target && source.community !== target.community) {
+            return 280; // Long distance for inter-cluster links
+          }
+          return 110; // Short distance for intra-cluster links
+        })
+        .strength((d) => {
+          const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+          const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+          const source = nodeById.get(sourceId);
+          const target = nodeById.get(targetId);
+          if (source && target && source.community !== target.community) {
+            return 0.02; // Weak for inter-cluster
+          }
+          return 0.18; // Strong for intra-cluster
+        });
+
+      // Custom cluster-level separation force
+      const clusterSeparationForce = () => {
+        const nodeList = simulation.nodes();
+        const communities = Array.from(new Set(nodeList.map(n => n.community ?? 0)));
+        
+        // Compute cluster metrics: centroid and radius
+        const clusterRadii = new Map();
+        const clusterCentroids = new Map();
+        
+        communities.forEach(commId => {
+          const commNodes = nodeList.filter(n => (n.community ?? 0) === commId);
+          if (commNodes.length === 0) return;
+          
+          // Centroid
+          const centroid = {
+            x: commNodes.reduce((sum, n) => sum + (n.x || 0), 0) / commNodes.length,
+            y: commNodes.reduce((sum, n) => sum + (n.y || 0), 0) / commNodes.length
+          };
+          clusterCentroids.set(commId, centroid);
+          
+          // Max distance from centroid
+          const maxDist = Math.max(
+            ...commNodes.map(n => {
+              const dx = (n.x || 0) - centroid.x;
+              const dy = (n.y || 0) - centroid.y;
+              return Math.sqrt(dx * dx + dy * dy);
+            }),
+            40
+          );
+          clusterRadii.set(commId, maxDist + 70); // Add padding
+        });
+
+        // Apply repulsion between cluster centroids to enforce minimum spacing
+        const clusterArray = Array.from(clusterCentroids.entries());
+        for (let i = 0; i < clusterArray.length; i++) {
+          for (let j = i + 1; j < clusterArray.length; j++) {
+            const [commA, centroidA] = clusterArray[i];
+            const [commB, centroidB] = clusterArray[j];
+            
+            const dx = centroidB.x - centroidA.x;
+            const dy = centroidB.y - centroidA.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            const radiusA = clusterRadii.get(commA);
+            const radiusB = clusterRadii.get(commB);
+            const minDistBetweenCentroids = radiusA + radiusB + 220; // Pad for separation
+            
+            if (distance < minDistBetweenCentroids && distance > 0.1) {
+              // Repulsion strength increases as clusters get closer
+              const deficit = minDistBetweenCentroids - distance;
+              const strength = 0.015 * deficit;
+              
+              const fx = (dx / distance) * strength;
+              const fy = (dy / distance) * strength;
+
+              // Apply forces to all nodes in each cluster
+              nodeList.forEach(n => {
+                if ((n.community ?? 0) === commA) {
+                  n.vx = (n.vx || 0) - fx;
+                  n.vy = (n.vy || 0) - fy;
+                }
+              });
+              nodeList.forEach(n => {
+                if ((n.community ?? 0) === commB) {
+                  n.vx = (n.vx || 0) + fx;
+                  n.vy = (n.vy || 0) + fy;
+                }
+              });
+            }
+          }
+        }
+      };
+
+      // Clustering force: Pull nodes toward their cluster center
+      const clusteringForce = () => {
+        const nodeList = simulation.nodes();
+        const communities = Array.from(new Set(nodeList.map(n => n.community ?? 0)));
+        
+        // Compute cluster centroids
+        const centroids = new Map();
+        communities.forEach(commId => {
+          const nodes = nodeList.filter(n => (n.community ?? 0) === commId);
+          if (nodes.length > 0) {
+            centroids.set(commId, {
+              x: nodes.reduce((sum, n) => sum + (n.x || 0), 0) / nodes.length,
+              y: nodes.reduce((sum, n) => sum + (n.y || 0), 0) / nodes.length
+            });
+          }
+        });
+
+        // Pull nodes toward their cluster center
+        nodeList.forEach(n => {
+          const centroid = centroids.get(n.community ?? 0);
+          if (centroid) {
+            const dx = centroid.x - (n.x || 0);
+            const dy = centroid.y - (n.y || 0);
+            const strength = 0.008; // Gentle clustering
+            n.vx = (n.vx || 0) + dx * strength;
+            n.vy = (n.vy || 0) + dy * strength;
+          }
+        });
+      };
+
+      // Update forces
+      simulation
+        .force("x", d3.forceX(d => (communityCenters.get(d.community ?? 0) || { x: width / 2 }).x).strength(0.65))
+        .force("y", d3.forceY(d => (communityCenters.get(d.community ?? 0) || { y: height / 2 }).y).strength(0.65));
+      
+      // Remove old custom forces and add new ones
+      simulation.force("clusterSeparation", null);
+      simulation.force("clustering", null);
+      simulation.force("clusterSeparation", clusterSeparationForce);
+      simulation.force("clustering", clusteringForce);
+
+      // Initialize SVG filter for cluster glow
+      const defs = gRef.current.selectAll("defs").data([null]);
+      defs.enter().append("defs").merge(defs)
+        .html(`
+          <filter id="cluster-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        `);
+
+      // Restart simulation with parameters for better convergence
+      simulation.alpha(0.15).alphaTarget(0).restart();
     }
 
     function drag(sim) {
@@ -350,11 +738,37 @@ const NetworkGraph = ({ data, visibleLinks = [], onNodeClick, highlightedEdges =
   }, [data, visibleLinks, highlightedEdges, onNodeClick]);
 
   return (
-    <div className="relative w-full h-[600px] border border-gray-800 rounded-3xl overflow-hidden bg-black/40">
+    <div className="relative w-full h-[600px] border border-gray-800 rounded-3xl overflow-hidden bg-gradient-to-b from-gray-900 to-black">
       <svg
-        className="w-full h-full cursor-move"
+        className="w-full h-full cursor-move block"
         ref={d3Container}
+        style={{ display: 'block', width: '100%', height: '100%' }}
       />
+      
+      {/* Transaction Type Legend */}
+      <div className="absolute top-4 left-6 bg-black/70 backdrop-blur-md p-4 rounded-2xl border border-gray-700 text-xs text-gray-300 font-mono">
+        <div className="font-bold text-yellow-400 mb-3">📊 TRANSACTION TYPES:</div>
+        <div className="flex flex-col space-y-2">
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-full bg-red-500" style={{boxShadow: '0 0 5px #ef4444'}}></div>
+            <span>⚠️ = FRAUD (Weight 9+)</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-full bg-orange-500" style={{boxShadow: '0 0 5px #f97316'}}></div>
+            <span>🎣 = PHISHING (Weight 8+)</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-full bg-yellow-500" style={{boxShadow: '0 0 5px #eab308'}}></div>
+            <span>💰 = TRANSFER (Weight 8+)</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-3 h-3 rounded-full bg-purple-500" style={{boxShadow: '0 0 5px #8b5cf6'}}></div>
+            <span>₿ = CRYPTO (Weight 9)</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Network Info */}
       <div className="absolute bottom-4 left-6 flex space-x-6 bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-gray-800 text-[10px] text-gray-400 font-bold uppercase tracking-widest pointer-events-none">
           <div className="flex items-center space-x-2"><div className="w-2 h-2 rounded-full bg-[#1DA1F2]"></div><span>Twitter</span></div>
           <div className="flex items-center space-x-2"><div className="w-2 h-2 rounded-full bg-[#0077B5]"></div><span>LinkedIn</span></div>

@@ -17,6 +17,7 @@ function App() {
     const [pathTarget, setPathTarget] = useState('');
     const [pathResult, setPathResult] = useState(null);
     const [pathError, setPathError] = useState('');
+    const [sidebarTab, setSidebarTab] = useState('insights');
     const [networkSummary, setNetworkSummary] = useState({
         nodes: 0,
         edges: 0,
@@ -31,6 +32,7 @@ function App() {
         diameter: null,
         strongest_connections: []
     });
+    const [analysis, setAnalysis] = useState(null);
     const [isAboutOpen, setIsAboutOpen] = useState(false);
     const [platformFilter, setPlatformFilter] = useState('All');
     const [communityFilter, setCommunityFilter] = useState('All');
@@ -92,6 +94,11 @@ function App() {
             if (summaryRes.ok) {
                 const summary = await summaryRes.json();
                 setNetworkSummary(summary || {});
+            }
+
+            const analysisRes = await fetch('http://localhost:8000/analysis');
+            if (analysisRes.ok) {
+                setAnalysis(await analysisRes.json());
             }
         } catch (e) { }
     };
@@ -265,6 +272,8 @@ function App() {
         const layoutGraph = useMemo(() => ({ nodes: graph.nodes, links: graph.links }), [graph.nodes, graph.links]);
     const nodeOptions = graph.nodes.map(n => n.id).filter(Boolean).sort();
     const highlightedEdges = (pathResult && pathResult.edges) ? pathResult.edges : [];
+    const mstEdges = analysis?.mst?.kruskal?.edges || [];
+    const bridgeEdges = analysis?.connectivity?.bridge_edges || [];
     const pathSteps = highlightedEdges.map((edge, index) => {
         const prev = highlightedEdges[index - 1];
         const prevPlatform = prev ? (prev.platform || 'Unknown') : '';
@@ -273,6 +282,34 @@ function App() {
         const transitionLabel = transition ? `${prevPlatform} -> ${currentPlatform}` : '';
         return { ...edge, transition, transitionLabel, platform: currentPlatform };
     });
+
+    const renderMatrix = (matrix, labels) => {
+        if (!matrix || matrix.length === 0) return <div className="text-xs text-gray-600 italic">No matrix data.</div>;
+        return (
+            <div className="overflow-auto max-h-64 custom-scrollbar">
+                <table className="text-[10px] text-gray-300 border-collapse">
+                    <thead>
+                        <tr>
+                            <th className="px-2 py-1 border border-gray-800 bg-black/40">#</th>
+                            {labels.map((l) => (
+                                <th key={`h-${l}`} className="px-2 py-1 border border-gray-800 bg-black/40 text-left">{l}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {matrix.map((row, i) => (
+                            <tr key={`r-${labels[i] || i}`}>
+                                <td className="px-2 py-1 border border-gray-800 bg-black/40 text-gray-400">{labels[i] || i}</td>
+                                {row.map((v, j) => (
+                                    <td key={`c-${i}-${j}`} className="px-2 py-1 border border-gray-900 text-center">{v}</td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        );
+    };
 
     return (
         <div className="min-h-screen bg-[#050505] text-gray-200 p-8 font-sans">
@@ -334,10 +371,14 @@ function App() {
                         )}
                         {pathResult && (
                             <div className="mt-5 bg-black/40 border border-gray-800 rounded-2xl p-4">
+                                <div className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-3">
+                                    Algorithm: Dijkstra (weight -&gt; distance = 1/weight)
+                                </div>
                                 <div className="flex flex-wrap gap-4 text-[10px] text-gray-500 font-black uppercase tracking-widest mb-3">
                                     <span>Hops: {pathResult.hops}</span>
                                     <span>Total Strength: {pathResult.total_strength}</span>
                                     <span>Distance: {pathResult.total_distance}</span>
+                                    <span>Cost: {pathResult.total_cost ?? pathResult.total_distance}</span>
                                 </div>
                                 <div className="text-sm text-gray-200 font-mono break-words">
                                     {pathResult.path.join(' -> ')}
@@ -463,6 +504,8 @@ function App() {
                                visibleLinks={filteredGraph.links}
                             onNodeClick={triggerSimulation}
                             highlightedEdges={highlightedEdges}
+                            mstEdges={mstEdges}
+                            bridgeEdges={bridgeEdges}
                         />
                     </div>
 
@@ -492,162 +535,341 @@ function App() {
                     </div>
                 </div>
 
-                <div className="col-span-12 lg:col-span-4 space-y-8">
-                    {/* Bridge Influencers Panel - NEW ADVANCED INSIGHT */}
-                    <div className="bg-gray-900/40 border border-blue-800/30 rounded-3xl p-6">
-                        <h2 className="text-lg font-bold mb-6 flex items-center justify-between">
-                            <div className="flex items-center"><GitMerge size={18} className="mr-3 text-blue-400" /> Bridge Influencers</div>
-                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest px-2 py-1 bg-blue-500/5 border border-blue-500/20 rounded-md">Betweenness</span>
-                        </h2>
-                        <div className="space-y-4">
-                            {bridges.map((br, i) => (
-                                <div key={i} className="bg-[#0a0a0a] p-4 rounded-2xl border border-gray-800 flex items-center justify-between group overflow-hidden relative">
-                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 opacity-20 group-hover:opacity-100 transition-opacity"></div>
-                                    <span className="font-bold text-gray-300 group-hover:text-white transition-colors">{br.node}</span>
-                                    <div className="text-right">
-                                        <p className="text-[10px] font-black text-blue-500 uppercase">Bridge Score</p>
-                                        <p className="text-xs font-mono font-bold text-white">{br.score}</p>
-                                    </div>
-                                </div>
-                            ))}
-                            {bridges.length === 0 && <p className="text-xs text-gray-600 italic text-center">Identifying network bridges...</p>}
-                        </div>
-                        <p className="text-[9px] text-gray-600 mt-4 text-center px-4 leading-relaxed italic">Bridge Influencers connect different communities and prevent information silos. High Betweenness indicates high "Brokerage Power".</p>
-                    </div>
-
-                    <div className="bg-[#0a0a0a] border border-gray-900 rounded-3xl p-6 h-[350px] flex flex-col shadow-inner">
-                        <h2 className="text-lg font-bold mb-6 flex items-center justify-between">
-                            <div className="flex items-center"><Send size={18} className="mr-3 text-green-400" /> Interaction Stream</div>
-                        </h2>
-                        <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2">
-                            {events.map((e, i) => (
-                                <div key={i} className="text-xs bg-gray-900/30 p-3 rounded-xl border border-gray-800/50 flex flex-col">
-                                    <p className="text-gray-400"><span className="text-white font-bold">{e.source}</span> → <span className="text-white font-bold">{e.target}</span></p>
-                                    <div className="flex justify-between items-center mt-1">
-                                        <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest">{e.platform}</span>
-                                        <span className="text-[8px] text-gray-600">{new Date(e.timestamp).toLocaleTimeString()}</span>
-                                    </div>
-                                </div>
+                <div className="col-span-12 lg:col-span-4">
+                    <div className="bg-gray-900/40 border border-gray-800 rounded-3xl p-4 backdrop-blur-md">
+                        <div className="flex flex-wrap gap-2 mb-6">
+                            {[
+                                { id: 'insights', label: 'Insights' },
+                                { id: 'network', label: 'Network' },
+                                { id: 'theory', label: 'Graph Theory' }
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setSidebarTab(tab.id)}
+                                    className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full border transition-colors ${sidebarTab === tab.id ? 'bg-indigo-500/20 border-indigo-500 text-indigo-200' : 'border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'}`}
+                                >
+                                    {tab.label}
+                                </button>
                             ))}
                         </div>
-                    </div>
 
-                    <div className="bg-gray-900/40 border border-gray-800 rounded-3xl p-6">
-                        <h2 className="text-lg font-bold mb-6 flex items-center justify-between">
-                            <div className="flex items-center"><Layers size={18} className="mr-3 text-green-400" /> Community Matrix</div>
-                            <span className="text-[10px] font-black text-green-500/80 uppercase tracking-widest px-2 py-1 bg-green-500/5 border border-green-500/20 rounded-md">Live Clusters</span>
-                        </h2>
-                        <div className="bg-[#0a0a0a] border border-gray-800 p-6 rounded-2xl text-center">
-                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black mb-2">Discrete Clusters</p>
-                            <p className="text-4xl font-black text-white">{communityCount}</p>
-                        </div>
-                    </div>
+                        {sidebarTab === 'insights' && (
+                            <div className="space-y-6">
+                                <div className="bg-gray-900/40 border border-blue-800/30 rounded-3xl p-5">
+                                    <h2 className="text-lg font-bold mb-5 flex items-center justify-between">
+                                        <div className="flex items-center"><GitMerge size={18} className="mr-3 text-blue-400" /> Bridge Influencers</div>
+                                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest px-2 py-1 bg-blue-500/5 border border-blue-500/20 rounded-md">Betweenness</span>
+                                    </h2>
+                                    <div className="space-y-3">
+                                        {bridges.map((br, i) => (
+                                            <div key={i} className="bg-[#0a0a0a] p-3 rounded-2xl border border-gray-800 flex items-center justify-between group overflow-hidden relative">
+                                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 opacity-20 group-hover:opacity-100 transition-opacity"></div>
+                                                <span className="font-bold text-gray-300 group-hover:text-white transition-colors">{br.node}</span>
+                                                <div className="text-right">
+                                                    <p className="text-[10px] font-black text-blue-500 uppercase">Bridge Score</p>
+                                                    <p className="text-xs font-mono font-bold text-white">{br.score}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {bridges.length === 0 && <p className="text-xs text-gray-600 italic text-center">Identifying network bridges...</p>}
+                                    </div>
+                                    <p className="text-[9px] text-gray-600 mt-4 text-center px-4 leading-relaxed italic">Bridge Influencers connect different communities and prevent information silos. High Betweenness indicates high "Brokerage Power".</p>
+                                </div>
 
-                    <div className="bg-gray-900/40 border border-gray-800 rounded-3xl p-6">
-                        <h2 className="text-lg font-bold mb-6 flex items-center"><Users size={18} className="mr-3 text-yellow-500" /> Top Power Players</h2>
-                        <div className="space-y-3">
-                            {influencers.map((inf, i) => (
-                                <div key={i} className="flex justify-between items-center bg-[#0a0a0a] p-3 rounded-xl border border-gray-800 hover:border-yellow-500/30 transition-all text-white">
-                                    <span className="font-bold text-sm truncate max-w-[120px]">{inf.node}</span>
-                                    <div className="flex items-center space-x-2">
-                                        <div className="w-16 bg-gray-900 h-1 rounded-full overflow-hidden">
-                                            <div className="bg-yellow-500 h-full" style={{ width: `${inf.score * 100}%` }}></div>
+                                <div className="bg-gray-900/40 border border-gray-800 rounded-3xl p-5">
+                                    <h2 className="text-lg font-bold mb-5 flex items-center"><Users size={18} className="mr-3 text-yellow-500" /> Top Power Players</h2>
+                                    <div className="space-y-3">
+                                        {influencers.map((inf, i) => (
+                                            <div key={i} className="flex justify-between items-center bg-[#0a0a0a] p-3 rounded-xl border border-gray-800 hover:border-yellow-500/30 transition-all text-white">
+                                                <span className="font-bold text-sm truncate max-w-[120px]">{inf.node}</span>
+                                                <div className="flex items-center space-x-2">
+                                                    <div className="w-16 bg-gray-900 h-1 rounded-full overflow-hidden">
+                                                        <div className="bg-yellow-500 h-full" style={{ width: `${inf.score * 100}%` }}></div>
+                                                    </div>
+                                                    <span className="text-[9px] font-black text-yellow-500">{inf.score}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-900/40 border border-emerald-900/30 rounded-3xl p-5">
+                                    <h2 className="text-lg font-bold mb-5 flex items-center"><Layers size={18} className="mr-3 text-emerald-400" /> Strongest Connections</h2>
+                                    <div className="space-y-3">
+                                        {(networkSummary.strongest_connections || []).map((edge, i) => (
+                                            <div key={i} className="bg-[#0a0a0a] p-3 rounded-xl border border-emerald-900/20">
+                                                <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-emerald-300">
+                                                    <span>{edge.source}</span>
+                                                    <span>→</span>
+                                                    <span>{edge.target}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between text-white mt-2">
+                                                    <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Strength</span>
+                                                    <span className="text-xs font-black text-emerald-300">{edge.weight}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {(networkSummary.strongest_connections || []).length === 0 && (
+                                            <p className="text-xs text-gray-600 italic text-center">No strong connections yet.</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                              
+                            </div>
+                        )}
+
+                        {sidebarTab === 'network' && (
+                            <div className="space-y-6">
+                                <div className="bg-[#0a0a0a] border border-gray-900 rounded-3xl p-5 h-[300px] flex flex-col shadow-inner">
+                                    <h2 className="text-lg font-bold mb-5 flex items-center justify-between">
+                                        <div className="flex items-center"><Send size={18} className="mr-3 text-green-400" /> Interaction Stream</div>
+                                    </h2>
+                                    <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2">
+                                        {events.map((e, i) => (
+                                            <div key={i} className="text-xs bg-gray-900/30 p-3 rounded-xl border border-gray-800/50 flex flex-col">
+                                                <p className="text-gray-400"><span className="text-white font-bold">{e.source}</span> → <span className="text-white font-bold">{e.target}</span></p>
+                                                <div className="flex justify-between items-center mt-1">
+                                                    <span className="text-[8px] font-black text-indigo-500 uppercase tracking-widest">{e.platform}</span>
+                                                    <span className="text-[8px] text-gray-600">{new Date(e.timestamp).toLocaleTimeString()}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-900/40 border border-gray-800 rounded-3xl p-5">
+                                    <h2 className="text-lg font-bold mb-5 flex items-center justify-between">
+                                        <div className="flex items-center"><Layers size={18} className="mr-3 text-green-400" /> Community Matrix</div>
+                                        <span className="text-[10px] font-black text-green-500/80 uppercase tracking-widest px-2 py-1 bg-green-500/5 border border-green-500/20 rounded-md">Live Clusters</span>
+                                    </h2>
+                                    <div className="bg-[#0a0a0a] border border-gray-800 p-6 rounded-2xl text-center">
+                                        <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black mb-2">Discrete Clusters</p>
+                                        <p className="text-4xl font-black text-white">{communityCount}</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-900/40 border border-gray-800 rounded-3xl p-5">
+                                    <h2 className="text-lg font-bold mb-5 flex items-center"><Activity size={18} className="mr-3 text-indigo-400" /> Network Structure</h2>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4 text-center">
+                                            <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">Density</p>
+                                            <p className="text-xl font-black text-white">{networkSummary.density ?? 0}</p>
                                         </div>
-                                        <span className="text-[9px] font-black text-yellow-500">{inf.score}</span>
+                                        <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4 text-center">
+                                            <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">Avg Degree</p>
+                                            <p className="text-xl font-black text-white">{networkSummary.avg_degree ?? 0}</p>
+                                        </div>
+                                        <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4 text-center">
+                                            <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">Clustering</p>
+                                            <p className="text-xl font-black text-white">{networkSummary.avg_clustering ?? 0}</p>
+                                        </div>
+                                        <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4 text-center">
+                                            <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">Components</p>
+                                            <p className="text-xl font-black text-white">{networkSummary.components ?? 0}</p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 flex justify-between text-[10px] text-gray-500 font-black uppercase tracking-widest">
+                                        <span>Largest Component</span>
+                                        <span>{Math.round(((networkSummary.largest_component_ratio ?? 0) * 100))}%</span>
+                                    </div>
+                                    <div className="mt-2 flex justify-between text-[10px] text-gray-500 font-black uppercase tracking-widest">
+                                        <span>Bridge Edges</span>
+                                        <span>{networkSummary.bridges ?? 0}</span>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
 
-                    <div className="bg-gray-900/40 border border-gray-800 rounded-3xl p-6">
-                        <h2 className="text-lg font-bold mb-6 flex items-center"><Activity size={18} className="mr-3 text-indigo-400" /> Network Structure</h2>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4 text-center">
-                                <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">Density</p>
-                                <p className="text-xl font-black text-white">{networkSummary.density ?? 0}</p>
-                            </div>
-                            <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4 text-center">
-                                <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">Avg Degree</p>
-                                <p className="text-xl font-black text-white">{networkSummary.avg_degree ?? 0}</p>
-                            </div>
-                            <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4 text-center">
-                                <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">Clustering</p>
-                                <p className="text-xl font-black text-white">{networkSummary.avg_clustering ?? 0}</p>
-                            </div>
-                            <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4 text-center">
-                                <p className="text-[9px] text-gray-500 uppercase tracking-widest font-black">Components</p>
-                                <p className="text-xl font-black text-white">{networkSummary.components ?? 0}</p>
-                            </div>
-                        </div>
-                        <div className="mt-4 flex justify-between text-[10px] text-gray-500 font-black uppercase tracking-widest">
-                            <span>Largest Component</span>
-                            <span>{Math.round(((networkSummary.largest_component_ratio ?? 0) * 100))}%</span>
-                        </div>
-                        <div className="mt-2 flex justify-between text-[10px] text-gray-500 font-black uppercase tracking-widest">
-                            <span>Bridge Edges</span>
-                            <span>{networkSummary.bridges ?? 0}</span>
-                        </div>
-                    </div>
-
-                    <div className="bg-gray-900/40 border border-purple-900/30 rounded-3xl p-6">
-                        <h2 className="text-lg font-bold mb-6 flex items-center"><Zap size={18} className="mr-3 text-purple-400" /> Path Analysis</h2>
-                        <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4">
-                            <div className="flex items-center justify-between text-[10px] text-gray-500 font-black uppercase tracking-widest">
-                                <span>Avg Shortest Path</span>
-                                <span>{networkSummary.avg_shortest_path ?? 'n/a'}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-[10px] text-gray-500 font-black uppercase tracking-widest mt-3">
-                                <span>Weighted Flow</span>
-                                <span>{networkSummary.weighted_avg_shortest_path ?? 'n/a'}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-[10px] text-gray-500 font-black uppercase tracking-widest mt-3">
-                                <span>Diameter</span>
-                                <span>{networkSummary.diameter ?? 'n/a'}</span>
-                            </div>
-                        </div>
-                        <p className="text-[9px] text-gray-600 mt-4 text-center px-4 leading-relaxed italic">Shorter paths mean faster information flow. Weighted flow treats stronger links as shorter distances.</p>
-                    </div>
-
-                    <div className="bg-gray-900/40 border border-emerald-900/30 rounded-3xl p-6">
-                        <h2 className="text-lg font-bold mb-6 flex items-center"><Layers size={18} className="mr-3 text-emerald-400" /> Strongest Connections</h2>
-                        <div className="space-y-3">
-                            {(networkSummary.strongest_connections || []).map((edge, i) => (
-                                <div key={i} className="bg-[#0a0a0a] p-3 rounded-xl border border-emerald-900/20">
-                                    <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-emerald-300">
-                                        <span>{edge.source}</span>
-                                        <span>→</span>
-                                        <span>{edge.target}</span>
+                                <div className="bg-gray-900/40 border border-purple-900/30 rounded-3xl p-5">
+                                    <h2 className="text-lg font-bold mb-5 flex items-center"><Zap size={18} className="mr-3 text-purple-400" /> Path Analysis</h2>
+                                    <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4">
+                                        <div className="flex items-center justify-between text-[10px] text-gray-500 font-black uppercase tracking-widest">
+                                            <span>Avg Shortest Path</span>
+                                            <span>{networkSummary.avg_shortest_path ?? 'n/a'}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[10px] text-gray-500 font-black uppercase tracking-widest mt-3">
+                                            <span>Weighted Flow</span>
+                                            <span>{networkSummary.weighted_avg_shortest_path ?? 'n/a'}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[10px] text-gray-500 font-black uppercase tracking-widest mt-3">
+                                            <span>Diameter</span>
+                                            <span>{networkSummary.diameter ?? 'n/a'}</span>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center justify-between text-white mt-2">
-                                        <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Strength</span>
-                                        <span className="text-xs font-black text-emerald-300">{edge.weight}</span>
+                                    <p className="text-[9px] text-gray-600 mt-4 text-center px-4 leading-relaxed italic">Shorter paths mean faster information flow. Weighted flow treats stronger links as shorter distances.</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {sidebarTab === 'theory' && (
+                            <div className="space-y-6">
+                                <div className="bg-gray-900/40 border border-emerald-900/30 rounded-3xl p-5">
+                                    <h2 className="text-lg font-bold mb-5 flex items-center"><Layers size={18} className="mr-3 text-emerald-400" /> Graph Analysis Panel</h2>
+                                    <div className="space-y-4">
+                                        <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4">
+                                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black mb-2">Graph Type</p>
+                                            <div className="flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-widest">
+                                                <span className="px-2 py-1 rounded-md border border-gray-800 text-gray-300">
+                                                    {analysis?.fundamentals?.connected ? 'Connected' : 'Disconnected'}
+                                                </span>
+                                                <span className="px-2 py-1 rounded-md border border-gray-800 text-gray-300">
+                                                    {analysis?.fundamentals?.has_circuit ? 'Cyclic' : 'Acyclic'}
+                                                </span>
+                                                <span className="px-2 py-1 rounded-md border border-gray-800 text-gray-300">
+                                                    {analysis?.eulerian?.is_eulerian ? 'Eulerian' : 'Non-Eulerian'}
+                                                </span>
+                                                <span className="px-2 py-1 rounded-md border border-gray-800 text-gray-300">
+                                                    {analysis?.trees?.properties?.is_tree ? 'Tree (Whole Graph)' : 'Not Tree (Whole Graph)'}
+                                                </span>
+                                                <span className="px-2 py-1 rounded-md border border-gray-800 text-gray-300">
+                                                    {(analysis?.fundamentals?.heterogeneity?.type || 'n/a').toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <div className="mt-3 text-[10px] text-gray-500 font-black uppercase tracking-widest">
+                                                Odd Degree Nodes: {analysis?.eulerian?.odd_degree_nodes?.length ?? 0}
+                                            </div>
+                                            <div className="mt-2 text-[10px] text-gray-500 font-black uppercase tracking-widest">
+                                                Platforms: {(analysis?.fundamentals?.heterogeneity?.platforms || []).join(', ') || 'n/a'}
+                                            </div>
+                                            <div className="mt-2 text-[10px] text-gray-500 font-black uppercase tracking-widest">
+                                                Components: {analysis?.fundamentals?.components?.length ?? 0}
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4">
+                                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black mb-2">Node Degree (Top)</p>
+                                            <div className="space-y-2">
+                                                {analysis && Object.entries(analysis.fundamentals.degree_map || {})
+                                                    .sort((a, b) => b[1] - a[1])
+                                                    .slice(0, 6)
+                                                    .map(([node, degree]) => (
+                                                        <div key={node} className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-300">
+                                                            <span className="truncate max-w-[120px]">{node}</span>
+                                                            <span className="text-emerald-300">{degree}</span>
+                                                        </div>
+                                                    ))}
+                                                {(!analysis || !analysis.fundamentals || !analysis.fundamentals.degree_map) && (
+                                                    <p className="text-xs text-gray-600 italic text-center">Awaiting analysis...</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4">
+                                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black mb-2">Component Analysis</p>
+                                            <div className="space-y-3">
+                                                {(analysis?.components_analysis || []).map((comp) => (
+                                                    <div key={comp.id} className="border border-gray-800 rounded-xl p-3 bg-black/40">
+                                                        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-gray-300">
+                                                            <span>Component {comp.id}</span>
+                                                            <span>{comp.node_count} nodes / {comp.edge_count} edges</span>
+                                                        </div>
+                                                        <div className="mt-2 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-widest">
+                                                            <span className="px-2 py-1 rounded-md border border-gray-800 text-gray-400">{comp.connected ? 'Connected' : 'Disconnected'}</span>
+                                                            <span className="px-2 py-1 rounded-md border border-gray-800 text-gray-400">{comp.cyclic ? 'Cyclic' : 'Acyclic'}</span>
+                                                            <span className="px-2 py-1 rounded-md border border-gray-800 text-gray-400">{comp.is_tree ? 'Tree' : 'Not Tree'}</span>
+                                                            <span className="px-2 py-1 rounded-md border border-gray-800 text-gray-400">{comp.is_eulerian ? 'Eulerian' : 'Non-Eulerian'}</span>
+                                                        </div>
+                                                        <div className="mt-2 text-[10px] text-gray-500 font-black uppercase tracking-widest">
+                                                            Odd Degree Nodes: {comp.odd_degree_nodes?.length ?? 0}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {(!analysis || !analysis.components_analysis || analysis.components_analysis.length === 0) && (
+                                                    <p className="text-xs text-gray-600 italic text-center">No component data.</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4">
+                                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black mb-2">MST Cost</p>
+                                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-300">
+                                                <span>Prim</span>
+                                                <span className="text-emerald-300">{analysis?.mst?.prim?.total_cost ?? 'n/a'}</span>
+                                            </div>
+                                            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-gray-300 mt-2">
+                                                <span>Kruskal</span>
+                                                <span className="text-emerald-300">{analysis?.mst?.kruskal?.total_cost ?? 'n/a'}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4">
+                                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black mb-2">Shortest Path Cost</p>
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-gray-300">
+                                                {pathResult?.total_cost ?? 'n/a'}
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4">
+                                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black mb-2">Hamiltonian</p>
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-gray-300">
+                                                Path: {analysis?.hamiltonian?.has_path ? 'Yes' : 'No'}
+                                            </div>
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-gray-300 mt-2">
+                                                Cycle: {analysis?.hamiltonian?.has_cycle ? 'Yes' : 'No'}
+                                            </div>
+                                            {analysis?.hamiltonian?.path?.length > 0 && (
+                                                <div className="text-[10px] text-gray-400 mt-2 break-words">
+                                                    {analysis.hamiltonian.path.join(' -> ')}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4">
+                                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black mb-2">Tree Properties</p>
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-gray-300">
+                                                Nodes: {analysis?.trees?.properties?.nodes ?? 0}
+                                            </div>
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-gray-300 mt-2">
+                                                Edges: {analysis?.trees?.properties?.edges ?? 0}
+                                            </div>
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-gray-300 mt-2">
+                                                Acyclic: {analysis?.trees?.properties?.acyclic ? 'Yes' : 'No'}
+                                            </div>
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-gray-300 mt-2">
+                                                Connected: {analysis?.trees?.properties?.connected ? 'Yes' : 'No'}
+                                            </div>
+                                            <div className="text-[10px] text-gray-400 mt-3">
+                                                Spanning Tree (Largest Component): {analysis?.trees?.spanning_tree_info?.edges ?? 0} edges / {analysis?.trees?.spanning_tree_info?.nodes ?? 0} nodes
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4">
+                                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black mb-2">Connectivity</p>
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-gray-300">
+                                                Articulation Points: {analysis?.connectivity?.articulation_points?.length ?? 0}
+                                            </div>
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-gray-300 mt-2">
+                                                Bridge Edges: {analysis?.connectivity?.bridge_edges?.length ?? 0}
+                                            </div>
+                                            {analysis?.connectivity?.articulation_points?.length > 0 && (
+                                                <div className="text-[10px] text-gray-400 mt-2 break-words">
+                                                    {analysis.connectivity.articulation_points.join(', ')}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4">
+                                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black mb-2">Graph Signature</p>
+                                            <div className="text-[10px] font-black uppercase tracking-widest text-gray-300">
+                                                Degree Sequence: {analysis?.isomorphism?.degree_sequence?.join(', ') || 'n/a'}
+                                            </div>
+                                            <div className="text-[10px] text-gray-400 mt-2 break-words">
+                                                Adjacency Signature: {analysis?.isomorphism?.adjacency_signature || 'n/a'}
+                                            </div>
+                                        </div>
+
+                                        <details className="bg-[#0a0a0a] border border-gray-800 rounded-2xl p-4">
+                                            <summary className="text-[10px] text-gray-500 uppercase tracking-widest font-black cursor-pointer">Matrices</summary>
+                                            <div className="mt-3">
+                                                <div className="text-[9px] text-gray-500 uppercase tracking-widest font-black mb-2">Adjacency</div>
+                                                {renderMatrix(analysis?.matrices?.adjacency || [], analysis?.matrices?.nodes || [])}
+                                                <div className="text-[9px] text-gray-500 uppercase tracking-widest font-black mt-4 mb-2">Incidence</div>
+                                                {renderMatrix(analysis?.matrices?.incidence || [], analysis?.matrices?.nodes || [])}
+                                            </div>
+                                        </details>
                                     </div>
                                 </div>
-                            ))}
-                            {(networkSummary.strongest_connections || []).length === 0 && (
-                                <p className="text-xs text-gray-600 italic text-center">No strong connections yet.</p>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="bg-gray-900/40 border border-purple-900/30 rounded-3xl p-6">
-                        <h2 className="text-lg font-bold mb-6 flex items-center"><Target size={18} className="mr-3 text-purple-400" /> Predictive Links</h2>
-                        <div className="space-y-4">
-                            {predictions.map((p, i) => (
-                                <div key={i} className="bg-[#0a0a0a] p-4 rounded-xl border border-purple-900/20">
-                                    <div className="flex justify-between font-black text-[9px] mb-2 tracking-widest uppercase text-white">
-                                        <span className="text-purple-300">{p.source}</span>
-                                        <span>⇌</span>
-                                        <span className="text-purple-300">{p.target}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-white">
-                                        <span className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Similarity Score</span>
-                                        <span className="text-xs font-black text-indigo-400">{(p.similarity * 100).toFixed(1)}%</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

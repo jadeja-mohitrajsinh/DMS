@@ -1,6 +1,5 @@
 import networkx as nx
-import pandas as pd
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 import datetime
 import threading
 
@@ -267,7 +266,253 @@ class NetworkAnalysisService:
                 "edges": edges,
                 "hops": max(0, len(path) - 1),
                 "total_strength": round(total_strength, 4),
-                "total_distance": round(total_distance, 4)
+                "total_distance": round(total_distance, 4),
+                "total_cost": round(total_distance, 4)
+            }
+
+    def _adjacency_matrix(self, nodes: List[str], weighted: bool = True) -> List[List[float]]:
+        index = {n: i for i, n in enumerate(nodes)}
+        size = len(nodes)
+        matrix = [[0.0 for _ in range(size)] for _ in range(size)]
+        for u, v, d in self.G.edges(data=True):
+            if u not in index or v not in index:
+                continue
+            w = float(d.get('weight', 1.0)) if weighted else 1.0
+            i = index[u]
+            j = index[v]
+            matrix[i][j] = w
+            matrix[j][i] = w
+        return matrix
+
+    def _incidence_matrix(self, nodes: List[str], edges: List[Tuple[str, str]]) -> List[List[int]]:
+        index = {n: i for i, n in enumerate(nodes)}
+        matrix = [[0 for _ in range(len(edges))] for _ in range(len(nodes))]
+        for e_idx, (u, v) in enumerate(edges):
+            if u in index:
+                matrix[index[u]][e_idx] = 1
+            if v in index:
+                matrix[index[v]][e_idx] = 1
+        return matrix
+
+    def _hamiltonian_backtrack(self, nodes: List[str], adj: Dict[str, List[str]], require_cycle: bool) -> Optional[List[str]]:
+        if not nodes:
+            return []
+        start = nodes[0]
+        path = [start]
+        visited = {start}
+
+        def dfs(current: str) -> Optional[List[str]]:
+            if len(path) == len(nodes):
+                if not require_cycle:
+                    return list(path)
+                if start in adj.get(current, []):
+                    return list(path) + [start]
+                return None
+            for nxt in adj.get(current, []):
+                if nxt in visited:
+                    continue
+                visited.add(nxt)
+                path.append(nxt)
+                result = dfs(nxt)
+                if result:
+                    return result
+                path.pop()
+                visited.remove(nxt)
+            return None
+
+        return dfs(start)
+
+    def _hamiltonian_heuristic(self, nodes: List[str], adj: Dict[str, List[str]]) -> Optional[List[str]]:
+        if not nodes:
+            return []
+        start = max(nodes, key=lambda n: len(adj.get(n, [])))
+        path = [start]
+        visited = {start}
+        current = start
+        while len(path) < len(nodes):
+            choices = [n for n in adj.get(current, []) if n not in visited]
+            if not choices:
+                break
+            next_node = max(choices, key=lambda n: len(adj.get(n, [])))
+            visited.add(next_node)
+            path.append(next_node)
+            current = next_node
+        if len(path) == len(nodes):
+            return path
+        return None
+
+    def _mst_forest(self, algorithm: str = "kruskal") -> Dict[str, Any]:
+        nodes = list(self.G.nodes())
+        if not nodes:
+            return {"edges": [], "total_cost": 0.0, "components": 0}
+        forest_edges = []
+        total = 0.0
+        components = 0
+        for comp in nx.connected_components(self.G):
+            sub = self.G.subgraph(comp).copy()
+            if sub.number_of_nodes() == 1:
+                components += 1
+                continue
+            tree = nx.minimum_spanning_tree(sub, weight='weight', algorithm=algorithm)
+            components += 1
+            for u, v, d in tree.edges(data=True):
+                w = float(d.get('weight', 1.0))
+                forest_edges.append({"source": u, "target": v, "weight": w})
+                total += w
+        return {"edges": forest_edges, "total_cost": round(total, 4), "components": components}
+
+    def get_graph_analysis(self) -> Dict[str, Any]:
+        with self.lock:
+            nodes = list(self.G.nodes())
+            edges = list(self.G.edges(data=True))
+            node_count = len(nodes)
+            edge_count = len(edges)
+            edge_pairs = [(u, v) for u, v, _ in edges]
+
+            degree_map = {n: int(self.G.degree(n)) for n in nodes}
+            degree_sequence = sorted(degree_map.values(), reverse=True)
+            is_connected = node_count > 0 and nx.is_connected(self.G)
+            components = [sorted(list(c)) for c in nx.connected_components(self.G)] if node_count > 0 else []
+
+            cycle_basis = nx.cycle_basis(self.G) if node_count > 2 else []
+            has_circuit = len(cycle_basis) > 0
+            sample_circuit = cycle_basis[0] if cycle_basis else []
+
+            odd_nodes = [n for n, d in degree_map.items() if d % 2 == 1]
+            is_eulerian = node_count > 0 and nx.is_eulerian(self.G)
+            has_eulerian_path = node_count > 0 and (len(odd_nodes) in (0, 2)) and nx.is_connected(self.G)
+
+            adj = {n: list(self.G.neighbors(n)) for n in nodes}
+            hamiltonian_path = None
+            hamiltonian_cycle = None
+            if node_count <= 10:
+                hamiltonian_path = self._hamiltonian_backtrack(nodes, adj, require_cycle=False)
+                hamiltonian_cycle = self._hamiltonian_backtrack(nodes, adj, require_cycle=True)
+            else:
+                hamiltonian_path = self._hamiltonian_heuristic(nodes, adj)
+
+            spanning_tree_edges = []
+            tree_props = {
+                "is_tree": False,
+                "edges": edge_count,
+                "nodes": node_count,
+                "acyclic": node_count > 0 and nx.is_forest(self.G),
+                "connected": is_connected
+            }
+            if node_count > 0:
+                tree_props["is_tree"] = tree_props["connected"] and tree_props["acyclic"] and edge_count == node_count - 1
+
+            spanning_tree_info = {"edges": 0, "nodes": 0, "component_size": 0}
+            if node_count > 0:
+                largest = max(components, key=len) if components else []
+                if largest:
+                    tree = nx.bfs_tree(self.G.subgraph(largest), source=largest[0]).to_undirected()
+                    spanning_tree_edges = [{"source": u, "target": v} for u, v in tree.edges()]
+                    spanning_tree_info = {
+                        "edges": tree.number_of_edges(),
+                        "nodes": tree.number_of_nodes(),
+                        "component_size": len(largest)
+                    }
+
+            components_analysis = []
+            for idx, comp in enumerate(components):
+                sub = self.G.subgraph(comp).copy()
+                comp_nodes = sub.number_of_nodes()
+                comp_edges = sub.number_of_edges()
+                comp_connected = comp_nodes > 0 and nx.is_connected(sub)
+                comp_acyclic = comp_nodes > 0 and nx.is_forest(sub)
+                comp_cyclic = comp_nodes > 0 and not comp_acyclic
+                comp_is_tree = comp_connected and comp_acyclic and comp_edges == comp_nodes - 1
+                comp_odd_nodes = [n for n, d in sub.degree() if d % 2 == 1]
+                comp_is_eulerian = comp_nodes > 0 and nx.is_eulerian(sub)
+                comp_has_eulerian_path = comp_nodes > 0 and (len(comp_odd_nodes) in (0, 2)) and comp_connected
+                components_analysis.append({
+                    "id": idx + 1,
+                    "nodes": sorted(list(comp)),
+                    "node_count": comp_nodes,
+                    "edge_count": comp_edges,
+                    "connected": comp_connected,
+                    "acyclic": comp_acyclic,
+                    "cyclic": comp_cyclic,
+                    "is_tree": comp_is_tree,
+                    "is_eulerian": comp_is_eulerian,
+                    "has_eulerian_path": comp_has_eulerian_path,
+                    "odd_degree_nodes": comp_odd_nodes
+                })
+
+            mst_prim = self._mst_forest("prim")
+            mst_kruskal = self._mst_forest("kruskal")
+
+            adjacency_matrix = self._adjacency_matrix(nodes, weighted=True)
+            incidence_matrix = self._incidence_matrix(nodes, edge_pairs)
+
+            articulation_points = list(nx.articulation_points(self.G)) if node_count > 1 else []
+            bridge_edges = [
+                {"source": u, "target": v}
+                for u, v in nx.bridges(self.G)
+            ] if node_count > 1 else []
+
+            adjacency_signature = "".join(
+                "".join("1" if v > 0 else "0" for v in row)
+                for row in adjacency_matrix
+            )
+
+            platform_set = {str(d.get('platform', 'Unknown')) for _, _, d in edges}
+            platform_count = len(platform_set)
+            heterogeneity = "homogeneous" if platform_count <= 1 else "heterogeneous"
+
+            return {
+                "fundamentals": {
+                    "degree_map": degree_map,
+                    "degree_sequence": degree_sequence,
+                    "connected": is_connected,
+                    "components": components,
+                    "has_walk": is_connected,
+                    "has_path": is_connected,
+                    "has_circuit": has_circuit,
+                    "sample_circuit": sample_circuit,
+                    "heterogeneity": {
+                        "type": heterogeneity,
+                        "platforms": sorted(platform_set)
+                    }
+                },
+                "components_analysis": components_analysis,
+                "eulerian": {
+                    "is_eulerian": is_eulerian,
+                    "has_eulerian_path": has_eulerian_path,
+                    "odd_degree_nodes": odd_nodes
+                },
+                "hamiltonian": {
+                    "has_path": hamiltonian_path is not None,
+                    "path": hamiltonian_path or [],
+                    "has_cycle": hamiltonian_cycle is not None,
+                    "cycle": hamiltonian_cycle or []
+                },
+                "trees": {
+                    "spanning_tree_edges": spanning_tree_edges,
+                    "spanning_tree_info": spanning_tree_info,
+                    "properties": tree_props
+                },
+                "mst": {
+                    "prim": mst_prim,
+                    "kruskal": mst_kruskal
+                },
+                "matrices": {
+                    "nodes": nodes,
+                    "edges": edge_pairs,
+                    "adjacency": adjacency_matrix,
+                    "incidence": incidence_matrix
+                },
+                "connectivity": {
+                    "articulation_points": articulation_points,
+                    "bridge_edges": bridge_edges,
+                    "cut_vertices": articulation_points,
+                    "cut_edges": bridge_edges
+                },
+                "isomorphism": {
+                    "degree_sequence": degree_sequence,
+                    "adjacency_signature": adjacency_signature
+                }
             }
 
 # Global instance for shared state (or use FastAPI Dependency Injection)
